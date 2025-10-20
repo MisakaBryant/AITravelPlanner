@@ -2,6 +2,7 @@
   "name": "aitravelplanner-frontend",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "AITravelPlanner 前端，基于 React/Vite/TypeScript/Ant Design/高德地图。",
   "scripts": {
     "dev": "vite",
