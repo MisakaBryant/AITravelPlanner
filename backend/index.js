@@ -12,7 +12,8 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', time: new Date() });
 });
 
-// TODO: 其他API路由
+// 行程规划API
+app.use('/api', require('./routes/plan'));
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
