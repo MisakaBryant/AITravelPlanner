@@ -19,27 +19,24 @@ const PlanForm: React.FC<{ onResult: (result: any) => void }> = ({ onResult }) =
     setForm(prev => ({ ...prev, ...changed }));
   };
 
-  // 语音输入结果自动填充到偏好或目的地
-  const handleSpeech = (text: string) => {
-    // 简单判断是否为地名或偏好
-    if (text.match(/(天|天数|天的)/)) {
-      const days = parseInt(text.replace(/\D/g, ''));
-      if (days) setForm(f => ({ ...f, days }));
-    } else if (text.match(/(预算|元|块)/)) {
-      const budget = parseInt(text.replace(/\D/g, ''));
-      if (budget) setForm(f => ({ ...f, budget }));
-    } else if (text.match(/(人|人数)/)) {
-      const people = parseInt(text.replace(/\D/g, ''));
-      if (people) setForm(f => ({ ...f, people }));
-    } else if (text.match(/(美食|动漫|亲子|购物|自然|历史|文化)/)) {
-      setForm(f => ({ ...f, preferences: f.preferences ? f.preferences + '、' + text : text }));
-    } else {
-      setForm(f => ({ ...f, destination: text }));
+  // 语音输入结果通过大模型后端接口智能解析
+  const handleSpeech = async (text: string) => {
+    try {
+      const res = await fetch('/api/ai/parse-speech', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      const data = await res.json();
+      if (data && data.code === 0 && data.data) {
+        setForm(f => ({ ...f, ...data.data }));
+      }
+    } catch (e) {
+      // 可选：提示用户大模型解析失败
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     setLoading(true);
     setError('');
     try {
