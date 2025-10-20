@@ -17,6 +17,8 @@ app.get('/api/health', (req, res) => {
 app.use('/api', require('./routes/plan'));
 // 费用预算API
 app.use('/api', require('./routes/budget'));
+// 用户管理与数据存储API
+app.use('/api', require('./routes/user'));
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
