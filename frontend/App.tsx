@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import PlanForm from './PlanForm';
+import BudgetEstimateForm from './BudgetEstimateForm';
+import BudgetRecordForm from './BudgetRecordForm';
 
 const App: React.FC = () => {
   const [plan, setPlan] = useState<any>(null);
+  const [budget, setBudget] = useState<any>(null);
+  const [recordMsg, setRecordMsg] = useState('');
 
   return (
     <div style={{ padding: 32, maxWidth: 600, margin: '0 auto' }}>
@@ -26,6 +30,23 @@ const App: React.FC = () => {
           </ol>
         </div>
       )}
+
+      <hr style={{ margin: '40px 0' }} />
+      <BudgetEstimateForm onResult={setBudget} />
+      {budget && (
+        <div style={{ marginTop: 24 }}>
+          <h2>预算估算结果</h2>
+          <div>总预算：{budget.total} 元</div>
+          <ul>
+            {budget.breakdown?.map((b: any, i: number) => (
+              <li key={i}>{b.type}：{b.amount} 元</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <BudgetRecordForm onSuccess={() => setRecordMsg('记录成功！')} />
+      {recordMsg && <div style={{ color: 'green', textAlign: 'center', marginTop: 8 }}>{recordMsg}</div>}
     </div>
   );
 };
