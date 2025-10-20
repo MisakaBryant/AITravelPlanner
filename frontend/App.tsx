@@ -1,3 +1,4 @@
+import MapView from './MapView';
 import React, { useState } from 'react';
 import PlanForm from './PlanForm';
 import BudgetEstimateForm from './BudgetEstimateForm';
@@ -41,6 +42,7 @@ const App: React.FC = () => {
               <div>预算：{plan.budget} 元</div>
               <div>人数：{plan.people}</div>
               <div>偏好：{Array.isArray(plan.preferences) ? plan.preferences.join('、') : plan.preferences}</div>
+              <MapView destination={plan.destination} />
               <h3>详细行程：</h3>
               <ol>
                 {plan.itinerary?.map((d: any) => (
