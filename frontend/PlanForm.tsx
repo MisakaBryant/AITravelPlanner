@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import SpeechInput from './SpeechInput';
 
 const defaultForm = {
   destination: '',
@@ -15,6 +16,25 @@ const PlanForm: React.FC<{ onResult: (result: any) => void }> = ({ onResult }) =
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  // 语音输入结果自动填充到偏好或目的地
+  const handleSpeech = (text: string) => {
+    // 简单判断是否为地名或偏好
+    if (text.match(/(天|天数|天的)/)) {
+      const days = parseInt(text.replace(/\D/g, ''));
+      if (days) setForm(f => ({ ...f, days }));
+    } else if (text.match(/(预算|元|块)/)) {
+      const budget = parseInt(text.replace(/\D/g, ''));
+      if (budget) setForm(f => ({ ...f, budget: String(budget) }));
+    } else if (text.match(/(人|人数)/)) {
+      const people = parseInt(text.replace(/\D/g, ''));
+      if (people) setForm(f => ({ ...f, people }));
+    } else if (text.match(/(美食|动漫|亲子|购物|自然|历史|文化)/)) {
+      setForm(f => ({ ...f, preferences: f.preferences ? f.preferences + '、' + text : text }));
+    } else {
+      setForm(f => ({ ...f, destination: text }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,6 +69,7 @@ const PlanForm: React.FC<{ onResult: (result: any) => void }> = ({ onResult }) =
   return (
     <form onSubmit={handleSubmit} style={{ maxWidth: 400, margin: '0 auto' }}>
       <h2>行程规划</h2>
+      <SpeechInput onResult={handleSpeech} />
       <input name="destination" placeholder="目的地" value={form.destination} onChange={handleChange} required style={{ width: '100%', marginBottom: 8 }} />
       <input name="days" type="number" min={1} placeholder="天数" value={form.days} onChange={handleChange} required style={{ width: '100%', marginBottom: 8 }} />
       <input name="budget" type="number" min={0} placeholder="预算（元）" value={form.budget} onChange={handleChange} required style={{ width: '100%', marginBottom: 8 }} />
