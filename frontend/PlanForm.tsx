@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
+import { Form, Input, InputNumber, Button, Typography } from 'antd';
 import SpeechInput from './SpeechInput';
 
 const defaultForm = {
   destination: '',
   days: 1,
-  budget: '',
+  budget: 0,
   preferences: '',
   people: 1
 };
@@ -14,8 +15,8 @@ const PlanForm: React.FC<{ onResult: (result: any) => void }> = ({ onResult }) =
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (changed: Partial<typeof defaultForm>) => {
+    setForm(prev => ({ ...prev, ...changed }));
   };
 
   // 语音输入结果自动填充到偏好或目的地
@@ -26,7 +27,7 @@ const PlanForm: React.FC<{ onResult: (result: any) => void }> = ({ onResult }) =
       if (days) setForm(f => ({ ...f, days }));
     } else if (text.match(/(预算|元|块)/)) {
       const budget = parseInt(text.replace(/\D/g, ''));
-      if (budget) setForm(f => ({ ...f, budget: String(budget) }));
+      if (budget) setForm(f => ({ ...f, budget }));
     } else if (text.match(/(人|人数)/)) {
       const people = parseInt(text.replace(/\D/g, ''));
       if (people) setForm(f => ({ ...f, people }));
@@ -67,19 +68,56 @@ const PlanForm: React.FC<{ onResult: (result: any) => void }> = ({ onResult }) =
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: 400, margin: '0 auto' }}>
-      <h2>行程规划</h2>
+    <Form
+      layout="vertical"
+      style={{ maxWidth: 400, margin: '0 auto', background: '#fff', padding: 24, borderRadius: 8, boxShadow: '0 2px 8px #f0f1f2' }}
+      onFinish={handleSubmit}
+    >
+      <Typography.Title level={4}>行程规划</Typography.Title>
       <SpeechInput onResult={handleSpeech} />
-      <input name="destination" placeholder="目的地" value={form.destination} onChange={handleChange} required style={{ width: '100%', marginBottom: 8 }} />
-      <input name="days" type="number" min={1} placeholder="天数" value={form.days} onChange={handleChange} required style={{ width: '100%', marginBottom: 8 }} />
-      <input name="budget" type="number" min={0} placeholder="预算（元）" value={form.budget} onChange={handleChange} required style={{ width: '100%', marginBottom: 8 }} />
-      <input name="people" type="number" min={1} placeholder="人数" value={form.people} onChange={handleChange} required style={{ width: '100%', marginBottom: 8 }} />
-      <textarea name="preferences" placeholder="偏好（如美食、动漫、亲子）" value={form.preferences} onChange={handleChange} style={{ width: '100%', marginBottom: 8 }} />
-      <button type="submit" disabled={loading} style={{ width: '100%' }}>
-        {loading ? '生成中...' : '生成行程'}
-      </button>
+      <Form.Item label="目的地" required>
+        <Input
+          placeholder="目的地"
+          value={form.destination}
+          onChange={e => handleChange({ destination: e.target.value })}
+        />
+      </Form.Item>
+      <Form.Item label="天数" required>
+        <InputNumber
+          min={1}
+          value={form.days}
+          onChange={v => handleChange({ days: Number(v) })}
+          style={{ width: '100%' }}
+        />
+      </Form.Item>
+      <Form.Item label="预算（元）" required>
+        <InputNumber
+          min={0}
+          value={form.budget}
+          onChange={v => handleChange({ budget: Number(v) })}
+          style={{ width: '100%' }}
+        />
+      </Form.Item>
+      <Form.Item label="人数" required>
+        <InputNumber
+          min={1}
+          value={form.people}
+          onChange={v => handleChange({ people: Number(v) })}
+          style={{ width: '100%' }}
+        />
+      </Form.Item>
+      <Form.Item label="偏好（如美食、动漫、亲子）">
+        <Input.TextArea
+          placeholder="偏好"
+          value={form.preferences}
+          onChange={e => handleChange({ preferences: e.target.value })}
+        />
+      </Form.Item>
+      <Button type="primary" htmlType="submit" loading={loading} block>
+        生成行程
+      </Button>
       {error && <div style={{ color: 'red', marginTop: 8 }}>{error}</div>}
-    </form>
+    </Form>
   );
 };
 

@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { Input, Button, DatePicker, Form, Typography, message } from 'antd';
+import dayjs from 'dayjs';
 
 const defaultForm = {
   item: '',
@@ -6,17 +8,17 @@ const defaultForm = {
   date: ''
 };
 
+
 const BudgetRecordForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
   const [form, setForm] = useState(defaultForm);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (changed: Partial<typeof defaultForm>) => {
+    setForm(prev => ({ ...prev, ...changed }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     setLoading(true);
     setError('');
     try {
@@ -43,16 +45,42 @@ const BudgetRecordForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) =>
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: 400, margin: '0 auto', marginTop: 24 }}>
-      <h2>开销记录</h2>
-      <input name="item" placeholder="项目（如午餐、门票）" value={form.item} onChange={handleChange} required style={{ width: '100%', marginBottom: 8 }} />
-      <input name="amount" type="number" min={0} placeholder="金额（元）" value={form.amount} onChange={handleChange} required style={{ width: '100%', marginBottom: 8 }} />
-      <input name="date" type="date" value={form.date} onChange={handleChange} required style={{ width: '100%', marginBottom: 8 }} />
-      <button type="submit" disabled={loading} style={{ width: '100%' }}>
-        {loading ? '记录中...' : '记录开销'}
-      </button>
+    <Form
+      layout="vertical"
+      style={{ maxWidth: 400, margin: '0 auto', marginTop: 24, background: '#fff', padding: 24, borderRadius: 8, boxShadow: '0 2px 8px #f0f1f2' }}
+      onFinish={handleSubmit}
+    >
+      <Typography.Title level={4}>开销记录</Typography.Title>
+      <Form.Item label="项目" required>
+        <Input
+          name="item"
+          placeholder="如午餐、门票"
+          value={form.item}
+          onChange={e => handleChange({ item: e.target.value })}
+        />
+      </Form.Item>
+      <Form.Item label="金额 (元)" required>
+        <Input
+          name="amount"
+          type="number"
+          min={0}
+          placeholder="金额"
+          value={form.amount}
+          onChange={e => handleChange({ amount: e.target.value })}
+        />
+      </Form.Item>
+      <Form.Item label="日期" required>
+        <DatePicker
+          style={{ width: '100%' }}
+          value={form.date ? dayjs(form.date) : undefined}
+          onChange={d => handleChange({ date: d ? d.format('YYYY-MM-DD') : '' })}
+        />
+      </Form.Item>
+      <Button type="primary" htmlType="submit" loading={loading} block>
+        记录开销
+      </Button>
       {error && <div style={{ color: 'red', marginTop: 8 }}>{error}</div>}
-    </form>
+    </Form>
   );
 };
 
