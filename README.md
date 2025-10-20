@@ -1,3 +1,43 @@
+# 部署与运行
+
+## 一、环境准备
+- 配置 `config/.env`，填写各类 API Key（如高德地图、语音识别、AI 等）。
+- 前端高德地图需在 `frontend/index.html` 中引入：
+	```html
+	<script src="https://webapi.amap.com/maps?v=2.0&key=你的高德Key"></script>
+	```
+
+## 二、本地开发
+- 后端：
+	```powershell
+	cd backend
+	npm install
+	npm run dev
+	```
+- 前端：
+	```powershell
+	cd frontend
+	npm install
+	npm run dev
+	```
+
+## 三、Docker 一键部署
+```shell
+docker build -t aitravelplanner .
+docker run -p 3001:3001 --env-file ./config/.env aitravelplanner
+```
+前端静态文件可用 nginx/serve 另行部署，或通过后端接口代理。
+
+## 四、CI/CD
+- 推荐使用 GitHub Actions 自动构建并推送 Docker 镜像到阿里云镜像仓库。
+- 可参考官方文档或在 `.github/workflows/` 下自定义 workflow。
+
+## 五、API Key 配置说明
+- 请勿将 key 写入代码，统一放在 `config/.env` 或前端 `.env` 文件。
+- 如需助教批改，建议提供阿里云百炼平台可用 key 并注明有效期。
+
+---
+如需详细开发文档、API Key 获取方式、CI/CD 配置等，可参考本项目后续补充内容。
 
 # AITravelPlanner 项目说明
 
