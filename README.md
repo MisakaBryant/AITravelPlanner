@@ -1,11 +1,36 @@
 # 部署与运行
 
 ## 一、环境准备
-- 配置 `config/.env`，填写各类 API Key（如高德地图、语音识别、AI 等）。
+
+### 1. 数据库初始化（Supabase）
+本项目使用 Supabase 作为数据库，请按以下步骤初始化：
+
+1. 登录 [Supabase 控制台](https://supabase.com/dashboard)
+2. 选择你的项目，点击左侧菜单 "SQL Editor"
+3. 新建查询（New Query），复制 `backend/db/init.sql` 的全部内容并粘贴
+4. 点击 "Run" 执行 SQL，自动创建 users、plans、records 三张表
+5. **禁用 RLS（开发/测试环境）**：在 SQL Editor 执行以下语句
+   ```sql
+   ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
+   ALTER TABLE public.plans DISABLE ROW LEVEL SECURITY;
+   ALTER TABLE public.records DISABLE ROW LEVEL SECURITY;
+   ```
+6. 在 Supabase Dashboard → Settings → API 中获取 `service_role key`
+
+### 2. 配置环境变量
+- 配置 `backend/.env`，填写各类 API Key：
+  ```env
+  PORT=3001
+  OPENAI_API_KEY=你的大模型API Key
+  OPENAI_MODEL=hunyuan-turbos-latest
+  OPENAI_BASE_URL=https://api.hunyuan.cloud.tencent.com/v1
+  SUPABASE_URL=https://你的项目.supabase.co
+  SUPABASE_KEY=你的service_role_key
+  ```
 - 前端高德地图需在 `frontend/index.html` 中引入：
-	```html
-	<script src="https://webapi.amap.com/maps?v=2.0&key=你的高德Key"></script>
-	```
+  ```html
+  <script src="https://webapi.amap.com/maps?v=2.0&key=你的高德Key"></script>
+  ```
 
 ## 二、本地开发
 - 后端：

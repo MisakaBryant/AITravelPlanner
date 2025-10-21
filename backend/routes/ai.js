@@ -25,6 +25,7 @@ async function callLLM(prompt) {
   });
   // 解析大模型返回内容
   const content = completion.choices[0].message.content;
+  console.log('LLM Response:', content);
   // 期望返回为JSON结构
   try {
     return JSON.parse(content);
@@ -56,5 +57,6 @@ router.post('/parse-speech', async (req, res) => {
     res.json({ code: 2, msg: '大模型解析失败' });
   }
 });
-
+// 让其他模块可以复用 callLLM，同时保持默认导出为路由
+router.callLLM = callLLM;
 module.exports = router;

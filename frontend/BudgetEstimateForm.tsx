@@ -17,8 +17,7 @@ const BudgetEstimateForm: React.FC<{ onResult: (result: any) => void }> = ({ onR
     setForm(prev => ({ ...prev, ...changed }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     setLoading(true);
     setError('');
     try {

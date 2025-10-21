@@ -9,7 +9,7 @@ const defaultForm = {
 };
 
 
-const BudgetRecordForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
+const BudgetRecordForm: React.FC<{ userId: number; onSuccess: () => void }> = ({ userId, onSuccess }) => {
   const [form, setForm] = useState(defaultForm);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -27,6 +27,7 @@ const BudgetRecordForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) =>
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
+          userId,
           amount: Number(form.amount)
         })
       });
