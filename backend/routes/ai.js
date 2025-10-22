@@ -57,6 +57,36 @@ router.post('/parse-speech', async (req, res) => {
     res.json({ code: 2, msg: '大模型解析失败' });
   }
 });
+
+// POST /api/ai/budget-estimate
+// body: { text }
+// 返回: { code:0, data: { total:number, breakdown:[{type,amount}], note?:string } }
+router.post('/budget-estimate', async (req, res) => {
+  const { text } = req.body;
+  if (!text) return res.json({ code: 1, msg: '缺少参数' });
+
+  const prompt = `请阅读以下旅行预算需求的自然语言描述，根据你的常识与合理估算，给出一个简要预算（人民币）。
+要求：
+1) 返回 JSON，不要额外文字。
+2) 字段包括：total（总预算，数字），breakdown（数组，每项含 type 和 amount 两个字段），note（可选，简短说明）。
+3) 估算尽量简洁合理，可按交通/住宿/餐饮/娱乐/购物等类型拆分。
+用户描述：${text}`;
+
+  try {
+    const result = await callLLM(prompt);
+    const data = {
+      total: Number(result.total) || 0,
+      breakdown: Array.isArray(result.breakdown) ? result.breakdown.map(it => ({
+        type: String(it.type || '其他'),
+        amount: Number(it.amount) || 0,
+      })) : [],
+      note: result.note ? String(result.note) : undefined,
+    };
+    return res.json({ code: 0, data });
+  } catch (e) {
+    return res.json({ code: 2, msg: '预算估算失败' });
+  }
+});
 // 让其他模块可以复用 callLLM，同时保持默认导出为路由
 router.callLLM = callLLM;
 module.exports = router;
