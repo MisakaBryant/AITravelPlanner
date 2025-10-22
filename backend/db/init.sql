@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS public.plans (
 CREATE TABLE IF NOT EXISTS public.records (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT REFERENCES public.users(id) ON DELETE CASCADE,
-  plan_id BIGINT REFERENCES public.plans(id) ON DELETE SET NULL,
+  plan_id BIGINT NOT NULL REFERENCES public.plans(id) ON DELETE CASCADE,
   item TEXT NOT NULL,
   amount NUMERIC(10, 2) NOT NULL,
   date DATE NOT NULL,

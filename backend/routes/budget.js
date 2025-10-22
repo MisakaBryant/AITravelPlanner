@@ -41,6 +41,12 @@ router.post('/budget/estimate', async (req, res) => {
 // body: { userId, item, amount, date, planId }
 router.post('/budget/record', async (req, res) => {
   const { userId, item, amount, date, planId } = req.body;
+  
+  // 验证必填字段
+  if (!planId) {
+    return res.json({ code: 1, msg: '必须关联到行程' });
+  }
+  
   const { error } = await supabase
     .from('records')
     .insert([{ user_id: userId, item, amount, date, plan_id: planId }]);

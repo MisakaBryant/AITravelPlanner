@@ -31,6 +31,10 @@ const BudgetRecordForm: React.FC<{ userId: number; onSuccess: () => void }> = ({
   };
 
   const handleSubmit = async () => {
+    if (!form.planId) {
+      setError('请选择关联行程');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -63,12 +67,11 @@ const BudgetRecordForm: React.FC<{ userId: number; onSuccess: () => void }> = ({
       style={{ background: '#fff' }}
       onFinish={handleSubmit}
     >
-      <Form.Item label="关联行程">
+      <Form.Item label="关联行程" required>
         <Select
-          placeholder="选择行程（可选）"
+          placeholder="请选择行程"
           value={form.planId}
           onChange={(value) => handleChange({ planId: value })}
-          allowClear
         >
           {plans.map(p => (
             <Select.Option key={p.id} value={p.id}>
