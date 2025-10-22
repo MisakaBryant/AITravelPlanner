@@ -47,10 +47,9 @@ const BudgetEstimateForm: React.FC<{ onResult: (result: any) => void }> = ({ onR
   return (
     <Form
       layout="vertical"
-      style={{ maxWidth: 400, margin: '0 auto', background: '#fff', padding: 24, borderRadius: 8, boxShadow: '0 2px 8px #f0f1f2' }}
+      style={{ background: '#fff' }}
       onFinish={handleSubmit}
     >
-      <Typography.Title level={4}>预算估算</Typography.Title>
       <Form.Item label="目的地" required>
         <Input
           placeholder="目的地"

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Button, Typography, Form, Input, InputNumber, message, Space, Descriptions, List } from 'antd';
-import { EditOutlined, SaveOutlined, RollbackOutlined, EnvironmentOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Card, Button, Typography, Form, Input, InputNumber, message, Space, Descriptions, List, Table, Tag } from 'antd';
+import { EditOutlined, SaveOutlined, RollbackOutlined, EnvironmentOutlined, PlusOutlined, DeleteOutlined, DollarOutlined } from '@ant-design/icons';
 import MapView from './MapView';
 
 const { Title } = Typography;
@@ -22,6 +22,8 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [records, setRecords] = useState<any[]>([]);
+  const [recordsLoading, setRecordsLoading] = useState(false);
   const [form] = Form.useForm();
 
   // 加载行程详情
@@ -55,6 +57,20 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
       .finally(() => setLoading(false));
   }, [id, userId, form]);
 
+  // 加载行程关联的开销记录
+  useEffect(() => {
+    if (!id) return;
+    setRecordsLoading(true);
+    fetch(`/api/budget/records?planId=${id}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.code === 0) {
+          setRecords(data.data || []);
+        }
+      })
+      .finally(() => setRecordsLoading(false));
+  }, [id]);
+
   // 保存编辑
   const handleSave = async () => {
     try {
@@ -81,6 +97,29 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
     // 打开高德地图Web端导航（或调用APP端URL Scheme）
     window.open(`https://uri.amap.com/navigation?to=${encodeURIComponent(keyword)},全国`, '_blank');
   };
+
+  // 计算总开销
+  const totalExpense = records.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+
+  // 开销记录表格列定义
+  const recordColumns = [
+    {
+      title: '项目',
+      dataIndex: 'item',
+      key: 'item',
+    },
+    {
+      title: '金额',
+      dataIndex: 'amount',
+      key: 'amount',
+      render: (amount: number) => <span style={{ color: '#f5222d', fontWeight: 'bold' }}>¥{amount}</span>
+    },
+    {
+      title: '日期',
+      dataIndex: 'date',
+      key: 'date',
+    },
+  ];
 
   if (loading) return <Card loading />;
   if (!plan) return <Card>行程不存在</Card>;
@@ -142,6 +181,43 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
                   </li>
                 ))}
               </ol>
+            </div>
+            <div style={{ marginTop: 24 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <Title level={4}>
+                  <DollarOutlined style={{ marginRight: 8 }} />
+                  行程开销
+                </Title>
+                {records.length > 0 && (
+                  <Tag color="red" style={{ fontSize: 16, padding: '4px 12px' }}>
+                    总计：¥{totalExpense.toFixed(2)}
+                  </Tag>
+                )}
+              </div>
+              <Table
+                dataSource={records}
+                columns={recordColumns}
+                loading={recordsLoading}
+                rowKey="id"
+                pagination={false}
+                locale={{ emptyText: '暂无开销记录' }}
+                size="small"
+                summary={() => 
+                  records.length > 0 ? (
+                    <Table.Summary fixed>
+                      <Table.Summary.Row>
+                        <Table.Summary.Cell index={0}>
+                          <strong>合计</strong>
+                        </Table.Summary.Cell>
+                        <Table.Summary.Cell index={1}>
+                          <strong style={{ color: '#f5222d' }}>¥{totalExpense.toFixed(2)}</strong>
+                        </Table.Summary.Cell>
+                        <Table.Summary.Cell index={2} />
+                      </Table.Summary.Row>
+                    </Table.Summary>
+                  ) : null
+                }
+              />
             </div>
           </>
         ) : (

@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { Input, Button, DatePicker, Form, Typography, message } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Input, Button, DatePicker, Form, Select } from 'antd';
 import dayjs from 'dayjs';
 
 const defaultForm = {
   item: '',
   amount: '',
-  date: ''
+  date: '',
+  planId: undefined as number | undefined
 };
 
 
@@ -13,6 +14,17 @@ const BudgetRecordForm: React.FC<{ userId: number; onSuccess: () => void }> = ({
   const [form, setForm] = useState(defaultForm);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [plans, setPlans] = useState<any[]>([]);
+
+  // 加载用户的行程列表
+  useEffect(() => {
+    if (!userId) return;
+    fetch(`/api/plan/list?userId=${userId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.code === 0) setPlans(data.data || []);
+      });
+  }, [userId]);
 
   const handleChange = (changed: Partial<typeof defaultForm>) => {
     setForm(prev => ({ ...prev, ...changed }));
@@ -48,10 +60,23 @@ const BudgetRecordForm: React.FC<{ userId: number; onSuccess: () => void }> = ({
   return (
     <Form
       layout="vertical"
-      style={{ maxWidth: 400, margin: '0 auto', marginTop: 24, background: '#fff', padding: 24, borderRadius: 8, boxShadow: '0 2px 8px #f0f1f2' }}
+      style={{ background: '#fff' }}
       onFinish={handleSubmit}
     >
-      <Typography.Title level={4}>开销记录</Typography.Title>
+      <Form.Item label="关联行程">
+        <Select
+          placeholder="选择行程（可选）"
+          value={form.planId}
+          onChange={(value) => handleChange({ planId: value })}
+          allowClear
+        >
+          {plans.map(p => (
+            <Select.Option key={p.id} value={p.id}>
+              {p.destination} - {p.days}天
+            </Select.Option>
+          ))}
+        </Select>
+      </Form.Item>
       <Form.Item label="项目" required>
         <Input
           name="item"

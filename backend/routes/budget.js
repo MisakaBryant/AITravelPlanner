@@ -3,13 +3,19 @@ const express = require('express');
 const router = express.Router();
 const supabase = require('../utils/supabase');
 
-// GET /api/budget/records?userId=xx
+// GET /api/budget/records?userId=xx&planId=xx
 router.get('/budget/records', async (req, res) => {
-  const { userId } = req.query;
-  const { data, error } = await supabase
-    .from('records')
-    .select('*')
-    .eq('user_id', userId);
+  const { userId, planId } = req.query;
+  let query = supabase.from('records').select('*');
+  
+  if (userId) {
+    query = query.eq('user_id', userId);
+  }
+  if (planId) {
+    query = query.eq('plan_id', planId);
+  }
+  
+  const { data, error } = await query.order('date', { ascending: false });
   if (error) return res.json({ code: 2, msg: '查询失败' });
   res.json({ code: 0, data: data || [] });
 });
@@ -32,12 +38,12 @@ router.post('/budget/estimate', async (req, res) => {
 });
 
 // POST /api/budget/record
-// body: { userId, item, amount, date }
+// body: { userId, item, amount, date, planId }
 router.post('/budget/record', async (req, res) => {
-  const { userId, item, amount, date } = req.body;
+  const { userId, item, amount, date, planId } = req.body;
   const { error } = await supabase
     .from('records')
-    .insert([{ user_id: userId, item, amount, date }]);
+    .insert([{ user_id: userId, item, amount, date, plan_id: planId }]);
   if (error) return res.json({ code: 2, msg: '记录失败' });
   res.json({ code: 0, msg: '记录成功' });
 });

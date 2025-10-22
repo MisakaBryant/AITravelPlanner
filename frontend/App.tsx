@@ -1,4 +1,4 @@
-import { Layout, Card, Button, Typography, message } from 'antd';
+import { Layout, Card, Button, Typography, message, Row, Col } from 'antd';
 import 'antd/dist/reset.css';
 import React, { useEffect, useState } from 'react';
 import PlanForm from './PlanForm';
@@ -59,47 +59,60 @@ const App: React.FC = () => {
       <Header style={{ background: '#1677ff', padding: '0 32px' }}>
         <Title level={2} style={{ color: '#fff', margin: 0, textAlign: 'center' }}>AITravelPlanner 智能旅行规划</Title>
       </Header>
-      <Content style={{ maxWidth: 700, margin: '32px auto', width: '100%' }}>
-        <Card style={{ boxShadow: '0 2px 8px #f0f1f2' }}>
-          <Routes>
-            <Route
-              path="/login"
-              element={
-                user ? <Navigate to="/home" replace /> : <AuthForm onLogin={handleLoggedIn} />
-              }
-            />
-            <Route
-              path="/home"
-              element={
-                !user ? (
-                  <Navigate to="/login" replace />
-                ) : (
-                  <>
-                    <div style={{ textAlign: 'right', marginBottom: 16 }}>
-                      你好，{user.username} <Button type="link" onClick={handleLogout}>退出</Button>
-                    </div>
-                    <PlanForm onResult={(p) => { setPlan(p); message.success('行程生成成功！'); }} />
-                    <PlanList userId={user.id} />
-                    <hr style={{ margin: '40px 0' }} />
-                    <BudgetEstimateForm onResult={setBudget} />
-                    <BudgetRecordForm userId={user.id} onSuccess={() => message.success('开销记录成功！')} />
-                  </>
-                )
-              }
-            />
-            <Route
-              path="/plan/:id"
-              element={
-                !user ? (
-                  <Navigate to="/login" replace />
-                ) : (
-                  <PlanDetailPage userId={user.id} />
-                )
-              }
-            />
-            <Route path="*" element={<Navigate to={user ? '/home' : '/login'} replace />} />
-          </Routes>
-        </Card>
+      <Content style={{ maxWidth: 1400, margin: '32px auto', width: '100%', padding: '0 16px' }}>
+        <Routes>
+          <Route
+            path="/login"
+            element={
+              <Card style={{ maxWidth: 500, margin: '0 auto', boxShadow: '0 2px 8px #f0f1f2' }}>
+                {user ? <Navigate to="/home" replace /> : <AuthForm onLogin={handleLoggedIn} />}
+              </Card>
+            }
+          />
+          <Route
+            path="/home"
+            element={
+              !user ? (
+                <Navigate to="/login" replace />
+              ) : (
+                <>
+                  <div style={{ textAlign: 'right', marginBottom: 16 }}>
+                    你好，{user.username} <Button type="link" onClick={handleLogout}>退出</Button>
+                  </div>
+                  <Row gutter={24}>
+                    {/* 左侧：行程规划主区域 */}
+                    <Col xs={24} lg={16}>
+                      <Card title={<Title level={4} style={{ margin: 0 }}>智能行程规划</Title>} style={{ marginBottom: 24 }}>
+                        <PlanForm onResult={(p) => { setPlan(p); message.success('行程生成成功！'); }} />
+                      </Card>
+                      <PlanList userId={user.id} />
+                    </Col>
+                    {/* 右侧：预算与开销管理 */}
+                    <Col xs={24} lg={8}>
+                      <Card title={<Title level={4} style={{ margin: 0 }}>预算估算</Title>} style={{ marginBottom: 24 }}>
+                        <BudgetEstimateForm onResult={setBudget} />
+                      </Card>
+                      <Card title={<Title level={4} style={{ margin: 0 }}>开销记录</Title>}>
+                        <BudgetRecordForm userId={user.id} onSuccess={() => message.success('开销记录成功！')} />
+                      </Card>
+                    </Col>
+                  </Row>
+                </>
+              )
+            }
+          />
+          <Route
+            path="/plan/:id"
+            element={
+              !user ? (
+                <Navigate to="/login" replace />
+              ) : (
+                <PlanDetailPage userId={user.id} />
+              )
+            }
+          />
+          <Route path="*" element={<Navigate to={user ? '/home' : '/login'} replace />} />
+        </Routes>
       </Content>
       <Footer style={{ textAlign: 'center', color: '#888' }}>
         AITravelPlanner ©2025 Created by GitHub Copilot

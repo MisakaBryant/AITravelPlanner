@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS public.plans (
 CREATE TABLE IF NOT EXISTS public.records (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT REFERENCES public.users(id) ON DELETE CASCADE,
+  plan_id BIGINT REFERENCES public.plans(id) ON DELETE SET NULL,
   item TEXT NOT NULL,
   amount NUMERIC(10, 2) NOT NULL,
   date DATE NOT NULL,
@@ -35,6 +36,7 @@ CREATE TABLE IF NOT EXISTS public.records (
 -- 创建索引以提升查询性能
 CREATE INDEX IF NOT EXISTS idx_plans_user_id ON public.plans(user_id);
 CREATE INDEX IF NOT EXISTS idx_records_user_id ON public.records(user_id);
+CREATE INDEX IF NOT EXISTS idx_records_plan_id ON public.records(plan_id);
 CREATE INDEX IF NOT EXISTS idx_users_username ON public.users(username);
 
 -- 授权（Supabase 默认会处理，但可显式声明）
