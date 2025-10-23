@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const supabase = require('../utils/supabase');
+const { generateToken, verifyToken, EXPIRE_MS } = require('../utils/token');
 
 // POST /api/auth/register
 router.post('/auth/register', async (req, res) => {
@@ -26,7 +27,7 @@ router.post('/auth/register', async (req, res) => {
 
 // POST /api/auth/login
 
-// 登录成功后设置 httpOnly cookie，内容为 userId:username
+// 登录成功后设置 httpOnly cookie，内容为加密token
 router.post('/auth/login', async (req, res) => {
   const { username, password } = req.body;
   const { data: user, error } = await supabase
@@ -36,11 +37,12 @@ router.post('/auth/login', async (req, res) => {
     .eq('password', password)
     .single();
   if (!user) return res.json({ code: 1, msg: '用户名或密码错误' });
-  // 设置 httpOnly cookie
-  res.cookie('token', `${user.id}:${user.username}`, {
+  // 生成加密token
+  const token = generateToken(user.id, user.username);
+  res.cookie('token', token, {
     httpOnly: true,
     sameSite: 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7天
+    maxAge: EXPIRE_MS
   });
   res.json({ code: 0, data: user });
 });
@@ -75,10 +77,9 @@ router.get('/plan/list', async (req, res) => {
 // GET /api/auth/check
 router.get('/auth/check', (req, res) => {
   const token = req.cookies && req.cookies.token;
-  if (!token) return res.json({ code: 401, msg: '未登录' });
-  const [userId, username] = token.split(':');
-  if (!userId || !username) return res.json({ code: 401, msg: '无效token' });
-  res.json({ code: 0, data: { id: userId, username } });
+  const info = token && verifyToken(token);
+  if (!info) return res.json({ code: 401, msg: '未登录' });
+  res.json({ code: 0, data: { id: info.userId, username: info.username } });
 });
 
 module.exports = router;
