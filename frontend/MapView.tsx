@@ -1,8 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 
-// 高德地图API需在index.html中引入<script src="https://webapi.amap.com/maps?v=2.0&key=YOUR_AMAP_KEY"></script>
-// 这里仅做演示，实际项目请将key配置到.env并动态注入
-
 declare global {
   interface Window {
     AMap: any;
@@ -10,49 +7,42 @@ declare global {
 }
 
 type ItineraryItem = { day: number; activities: string[] };
-const MapView: React.FC<{ destination: string; itinerary?: ItineraryItem[] }> = ({ destination, itinerary }) => {
+
+interface MapViewProps {
+  destination: string;
+  itinerary?: ItineraryItem[];
+}
+
+const MapView: React.FC<MapViewProps> = ({ destination, itinerary }) => {
   const mapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!window.AMap || !mapRef.current) return;
-    const map = new window.AMap.Map(mapRef.current, { zoom: 12 });
-
-    // 优先使用 “目的地 + 第一个行程活动” 进行地理编码，失败回退到仅目的地
-    const firstActivity = itinerary?.[0]?.activities?.[0];
-    const keyword = firstActivity ? `${destination} ${firstActivity}` : destination;
-
-    if (keyword) {
-      window.AMap.plugin('AMap.Geocoder', function () {
-        const geocoder = new window.AMap.Geocoder({ city: '全国' });
-        geocoder.getLocation(keyword, (status: string, result: any) => {
-          let target = null;
-          if (status === 'complete' && result?.geocodes?.length) {
-            target = result.geocodes[0].location;
-          }
-          // 若“目的地+活动”解析失败，尝试仅目的地
-          const fallback = () => {
-            if (!firstActivity && target) return; // 已经是目的地
-            if (!destination) return;
-            geocoder.getLocation(destination, (s2: string, r2: any) => {
-              if (s2 === 'complete' && r2?.geocodes?.length) {
-                const loc2 = r2.geocodes[0].location;
-                map.setZoomAndCenter(12, loc2);
-                new window.AMap.Marker({ position: loc2, map });
-              }
-            });
-          };
-
-          if (target) {
-            map.setZoomAndCenter(12, target);
-            new window.AMap.Marker({ position: target, map });
-          } else {
-            fallback();
-          }
-        });
-      });
+    console.log('[MapView] : ', window.AMap);
+    if (!window.AMap || !mapRef.current) {
+      console.warn('[MapView] AMap SDK 未加载，请在 index.html 中引入 AMap 脚本并配置有效 Key');
+      return;
     }
+    const map = new window.AMap.Map(mapRef.current, {
+      zoom: 12
+    });
+
+    window.AMap.plugin('AMap.Geocoder', function () {
+      const geocoder = new window.AMap.Geocoder();
+      if (!destination) return;
+      geocoder.getLocation(destination, function(status: string, result: any) {
+        console.log('[MapView] 目的地解析结果：', status, result);
+        if (status === 'complete' && result?.geocodes?.length) {
+          const loc = result.geocodes[0].location;
+          var marker = new window.AMap.Marker({ position: loc, map });
+          map.setFitView(marker);
+        } else {
+          console.warn('[MapView] 无法解析目的地位置：', destination);
+        }
+      });
+    });
+
     return () => map?.destroy();
-  }, [destination, itinerary]);
+  }, [destination]);
 
   return <div ref={mapRef} style={{ width: '100%', height: 360, margin: '24px 0' }} />;
 };

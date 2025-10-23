@@ -18,7 +18,8 @@ const AuthForm: React.FC<{ onLogin: (user: any) => void }> = ({ onLogin }) => {
       const res = await fetch(`/api/auth/${isLogin ? 'login' : 'register'}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
+        body: JSON.stringify(form),
+        credentials: 'include' // 关键：允许携带/接收 cookie
       });
       const data = await res.json();
       if (data.code === 0) {
@@ -66,3 +67,20 @@ const AuthForm: React.FC<{ onLogin: (user: any) => void }> = ({ onLogin }) => {
 };
 
 export default AuthForm;
+
+// 检查登录状态
+export async function checkAuth() {
+  try {
+    const res = await fetch('/api/auth/check', { credentials: 'include' });
+    const data = await res.json();
+    if (data.code === 0) return data.data;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// 登出
+export async function logout() {
+  await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+}
