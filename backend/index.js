@@ -22,7 +22,7 @@ app.use('/api', require('./routes/budget'));
 app.use('/api', require('./routes/user'));
 
 // AI语音智能解析API
-app.use('/api/ai', require('./routes/ai'));
+app.use('/api/ai', require('./routes/parse'));
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

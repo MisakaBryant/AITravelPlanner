@@ -21,20 +21,32 @@ router.get('/budget/records', async (req, res) => {
 });
 
 // POST /api/budget/estimate
-// body: { days, people, destination, preferences }
+// body: { text }
+// 返回: { code:0, data: { total:number, breakdown:[{type,amount}], note?:string } }
 router.post('/budget/estimate', async (req, res) => {
-  const { days, people, destination, preferences } = req.body;
-  // TODO: 调用大模型API进行预算估算（此处先返回mock数据）
-  const mockBudget = {
-    total: 8000 + days * 500 * people,
-    breakdown: [
-      { type: '交通', amount: 2000 },
-      { type: '住宿', amount: 3000 },
-      { type: '餐饮', amount: 2000 },
-      { type: '门票/娱乐', amount: 1000 + days * 100 }
-    ]
-  };
-  res.json({ code: 0, data: mockBudget });
+  const { text } = req.body;
+  if (!text) return res.json({ code: 1, msg: '缺少参数' });
+
+  // 业务层构造系统提示词（System Prompt）
+  const prompt = `请阅读以下旅行预算需求的自然语言描述，根据你的常识与合理估算，给出一个简要预算（人民币）。\n要求：\n1) 返回 JSON，不要额外文字。\n2) 字段包括：total（总预算，数字），breakdown（数组，每项含 type 和 amount 两个字段），note（可选，简短说明）。\n3) 估算尽量简洁合理，可按交通/住宿/餐饮/娱乐/购物等类型拆分。\n用户描述：${text}`;
+
+  try {
+    const { callLLM } = require('../utils/aiClient');
+    const result = await callLLM(prompt);
+    const data = {
+      total: Number(result.total) || 0,
+      breakdown: Array.isArray(result.breakdown)
+        ? result.breakdown.map((it) => ({
+            type: String(it.type || '其他'),
+            amount: Number(it.amount) || 0,
+          }))
+        : [],
+      note: result.note ? String(result.note) : undefined,
+    };
+    return res.json({ code: 0, data });
+  } catch (e) {
+    return res.json({ code: 2, msg: '预算估算失败' });
+  }
 });
 
 // POST /api/budget/record

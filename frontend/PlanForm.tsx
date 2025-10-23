@@ -3,6 +3,7 @@ import { Form, Input, InputNumber, Button, Typography } from 'antd';
 import SpeechInput from './SpeechInput';
 
 const defaultForm = {
+  origin: '',
   destination: '',
   days: 1,
   budget: 0,
@@ -72,6 +73,13 @@ const PlanForm: React.FC<{ onResult: (result: any) => void }> = ({ onResult }) =
     >
       <Typography.Title level={4}>行程规划</Typography.Title>
       <SpeechInput onResult={handleSpeech} />
+        <Form.Item label="出发地" required>
+          <Input
+            placeholder="出发地"
+            value={form.origin}
+            onChange={e => handleChange({ origin: e.target.value })}
+          />
+        </Form.Item>
       <Form.Item label="目的地" required>
         <Input
           placeholder="目的地"

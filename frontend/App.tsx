@@ -1,4 +1,4 @@
-import { Layout, Card, Button, Typography, message, Row, Col } from 'antd';
+import { Layout, Card, Button, Typography, message, Row, Col, Tag } from 'antd';
 import 'antd/dist/reset.css';
 import React, { useEffect, useState } from 'react';
 import PlanForm from './PlanForm';
@@ -13,6 +13,19 @@ const { Header, Content, Footer } = Layout;
 const { Title } = Typography;
 
 const App: React.FC = () => {
+  // 规范化偏好为字符串数组
+  const normalizePreferences = (pref: any): string[] => {
+    if (Array.isArray(pref)) return pref.map(String);
+    if (typeof pref === 'string') {
+      try {
+        const parsed = JSON.parse(pref);
+        if (Array.isArray(parsed)) return parsed.map(String);
+      } catch {}
+      // 兜底按照常见分隔符拆分
+      return pref.split(/[，,、\s]+/).filter(Boolean).map(String);
+    }
+    return [];
+  };
   const [plan, setPlan] = useState<any>(null);
   const [budget, setBudget] = useState<any>(null);
   const [recordMsg, setRecordMsg] = useState('');
@@ -85,6 +98,37 @@ const App: React.FC = () => {
                       <Card title={<Title level={4} style={{ margin: 0 }}>智能行程规划</Title>} style={{ marginBottom: 24 }}>
                         <PlanForm onResult={(p) => { setPlan(p); message.success('行程生成成功！'); }} />
                       </Card>
+                      {plan && (
+                        <Card title={<Title level={4} style={{ margin: 0 }}>行程</Title>} style={{ marginBottom: 24 }}>
+                            {plan.origin && <p><strong>出发地：</strong>{plan.origin}</p>}
+                          <p><strong>目的地：</strong>{plan.destination}</p>
+                          <p><strong>天数：</strong>{plan.days} 天 <strong>人数：</strong>{plan.people} 人 <strong>预算：</strong>{plan.budget} 元</p>
+                          <div>
+                            <strong>偏好：</strong>
+                            {normalizePreferences(plan.preferences).length === 0 ? (
+                              <span>无</span>
+                            ) : (
+                              normalizePreferences(plan.preferences).map((p: string, i: number) => (
+                                <Tag key={i} color="blue" style={{ marginBottom: 4 }}>{p}</Tag>
+                              ))
+                            )}
+                          </div>
+                          <div style={{ marginTop: 16 }}>
+                            <strong>详细行程：</strong>
+                            {plan.itinerary && plan.itinerary.map((item: any, idx: number) => (
+                              <div key={idx} style={{ marginTop: 12, padding: 12, background: '#fafafa', borderRadius: 4 }}>
+                                <div><strong>Day {item.day}</strong></div>
+                                <div>{Array.isArray(item.activities) ? item.activities.join(' → ') : item.activities}</div>
+                              </div>
+                            ))}
+                          </div>
+                          {user && (
+                            <Button type="primary" style={{ marginTop: 16 }} onClick={handleSavePlan}>
+                              保存到我的账号
+                            </Button>
+                          )}
+                        </Card>
+                      )}
                       <PlanList userId={user.id} />
                     </Col>
                     {/* 右侧：预算与开销管理 */}

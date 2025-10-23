@@ -8,6 +8,7 @@ const { Title } = Typography;
 
 interface Plan {
   id: number;
+    origin?: string;
   destination: string;
   days: number;
   budget: number;
@@ -26,6 +27,18 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [form] = Form.useForm();
 
+  const normalizePreferences = (pref: any): string[] => {
+    if (Array.isArray(pref)) return pref.map(String);
+    if (typeof pref === 'string') {
+      try {
+        const parsed = JSON.parse(pref);
+        if (Array.isArray(parsed)) return parsed.map(String);
+      } catch {}
+      return pref.split(/[，,、\s]+/).filter(Boolean).map(String);
+    }
+    return [];
+  };
+
   // 加载行程详情
   useEffect(() => {
     if (!id || !userId) return;
@@ -39,11 +52,12 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
           if (found) {
             setPlan(found);
             form.setFieldsValue({
-              destination: found.destination,
-              days: found.days,
-              budget: found.budget,
-              people: found.people,
-              preferences: Array.isArray(found.preferences) ? found.preferences.join('、') : found.preferences,
+                origin: found.origin || '',
+                destination: found.destination,
+                days: found.days,
+                budget: found.budget,
+                people: found.people,
+                preferences: normalizePreferences(found.preferences).join('、'),
               itinerary: found.itinerary?.map((item: any) => ({
                 day: item.day,
                 activities: Array.isArray(item.activities) ? item.activities.join('、') : item.activities
@@ -157,150 +171,156 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
           </Space>
         }
       >
-        {!editing ? (
-          <>
-            <Descriptions bordered column={2}>
-              <Descriptions.Item label="目的地">{plan.destination}</Descriptions.Item>
-              <Descriptions.Item label="天数">{plan.days} 天</Descriptions.Item>
-              <Descriptions.Item label="预算">{plan.budget} 元</Descriptions.Item>
-              <Descriptions.Item label="人数">{plan.people} 人</Descriptions.Item>
-              <Descriptions.Item label="偏好" span={2}>
-                {Array.isArray(plan.preferences) ? plan.preferences.join('、') : plan.preferences}
-              </Descriptions.Item>
-            </Descriptions>
-            <div style={{ marginTop: 24 }}>
-              <Title level={4}>地图位置</Title>
-              <MapView destination={plan.destination} itinerary={plan.itinerary} />
-            </div>
-            <div style={{ marginTop: 24 }}>
-              <Title level={4}>详细行程</Title>
-              <ol style={{ lineHeight: 2 }}>
-                {plan.itinerary?.map((d: any) => (
-                  <li key={d.day}>
-                    <strong>第{d.day}天：</strong>{d.activities.join('，')}
-                  </li>
-                ))}
-              </ol>
-            </div>
-            <div style={{ marginTop: 24 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <Title level={4}>
-                  <DollarOutlined style={{ marginRight: 8 }} />
-                  行程开销
-                </Title>
-                {records.length > 0 && (
-                  <Tag color="red" style={{ fontSize: 16, padding: '4px 12px' }}>
-                    总计：¥{totalExpense.toFixed(2)}
-                  </Tag>
-                )}
+        <Form form={form} layout="vertical" component="div">
+          {!editing ? (
+            <>
+              <Descriptions bordered column={2}>
+                {plan.origin && <Descriptions.Item label="出发地">{plan.origin}</Descriptions.Item>}
+                <Descriptions.Item label="目的地">{plan.destination}</Descriptions.Item>
+                <Descriptions.Item label="天数">{plan.days} 天</Descriptions.Item>
+                <Descriptions.Item label="预算">{plan.budget} 元</Descriptions.Item>
+                <Descriptions.Item label="人数">{plan.people} 人</Descriptions.Item>
+                <Descriptions.Item label="偏好" span={2}>
+                  {normalizePreferences(plan.preferences).join('、')}
+                </Descriptions.Item>
+              </Descriptions>
+              <div style={{ marginTop: 24 }}>
+                <Title level={4}>地图位置</Title>
+                <MapView destination={plan.destination} itinerary={plan.itinerary} />
               </div>
-              <Table
-                dataSource={records}
-                columns={recordColumns}
-                loading={recordsLoading}
-                rowKey="id"
-                pagination={false}
-                locale={{ emptyText: '暂无开销记录' }}
-                size="small"
-                summary={() => 
-                  records.length > 0 ? (
-                    <Table.Summary fixed>
-                      <Table.Summary.Row>
-                        <Table.Summary.Cell index={0}>
-                          <strong>合计</strong>
-                        </Table.Summary.Cell>
-                        <Table.Summary.Cell index={1}>
-                          <strong style={{ color: '#f5222d' }}>¥{totalExpense.toFixed(2)}</strong>
-                        </Table.Summary.Cell>
-                        <Table.Summary.Cell index={2} />
-                      </Table.Summary.Row>
-                    </Table.Summary>
-                  ) : null
-                }
-              />
-            </div>
-          </>
-        ) : (
-          <Form form={form} layout="vertical">
-            <Form.Item label="目的地" name="destination" rules={[{ required: true }]}>
-              <Input />
-            </Form.Item>
-            <Form.Item label="天数" name="days" rules={[{ required: true }]}>
-              <InputNumber min={1} style={{ width: '100%' }} />
-            </Form.Item>
-            <Form.Item label="预算（元）" name="budget" rules={[{ required: true }]}>
-              <InputNumber min={0} style={{ width: '100%' }} />
-            </Form.Item>
-            <Form.Item label="人数" name="people" rules={[{ required: true }]}>
-              <InputNumber min={1} style={{ width: '100%' }} />
-            </Form.Item>
-            <Form.Item label="偏好" name="preferences">
-              <Input.TextArea placeholder="用顿号、逗号或空格分隔" />
-            </Form.Item>
-            <Form.Item label="详细行程" name="itinerary">
-              <Form.List name="itinerary">
-                {(fields, { add, remove }) => (
-                  <>
-                    {fields.map(({ key, name, ...restField }) => (
-                      <Card
-                        key={key}
-                        size="small"
-                        title={`第 ${name + 1} 天`}
-                        extra={
-                          <Button
-                            type="text"
-                            danger
-                            size="small"
-                            icon={<DeleteOutlined />}
-                            onClick={() => remove(name)}
+              <div style={{ marginTop: 24 }}>
+                <Title level={4}>详细行程</Title>
+                <ol style={{ lineHeight: 2 }}>
+                  {plan.itinerary?.map((d: any) => (
+                    <li key={d.day}>
+                      <strong>第{d.day}天：</strong>{d.activities.join('，')}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+              <div style={{ marginTop: 24 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <Title level={4}>
+                    <DollarOutlined style={{ marginRight: 8 }} />
+                    行程开销
+                  </Title>
+                  {records.length > 0 && (
+                    <Tag color="red" style={{ fontSize: 16, padding: '4px 12px' }}>
+                      总计：¥{totalExpense.toFixed(2)}
+                    </Tag>
+                  )}
+                </div>
+                <Table
+                  dataSource={records}
+                  columns={recordColumns}
+                  loading={recordsLoading}
+                  rowKey="id"
+                  pagination={false}
+                  locale={{ emptyText: '暂无开销记录' }}
+                  size="small"
+                  summary={() => 
+                    records.length > 0 ? (
+                      <Table.Summary fixed>
+                        <Table.Summary.Row>
+                          <Table.Summary.Cell index={0}>
+                            <strong>合计</strong>
+                          </Table.Summary.Cell>
+                          <Table.Summary.Cell index={1}>
+                            <strong style={{ color: '#f5222d' }}>¥{totalExpense.toFixed(2)}</strong>
+                          </Table.Summary.Cell>
+                          <Table.Summary.Cell index={2} />
+                        </Table.Summary.Row>
+                      </Table.Summary>
+                    ) : null
+                  }
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <Form.Item label="出发地" name="origin">
+                <Input />
+              </Form.Item>
+              <Form.Item label="目的地" name="destination" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+              <Form.Item label="天数" name="days" rules={[{ required: true }]}>
+                <InputNumber min={1} style={{ width: '100%' }} />
+              </Form.Item>
+              <Form.Item label="预算（元）" name="budget" rules={[{ required: true }]}>
+                <InputNumber min={0} style={{ width: '100%' }} />
+              </Form.Item>
+              <Form.Item label="人数" name="people" rules={[{ required: true }]}>
+                <InputNumber min={1} style={{ width: '100%' }} />
+              </Form.Item>
+              <Form.Item label="偏好" name="preferences">
+                <Input.TextArea placeholder="用顿号、逗号或空格分隔" />
+              </Form.Item>
+              <Form.Item label="详细行程" name="itinerary">
+                <Form.List name="itinerary">
+                  {(fields, { add, remove }) => (
+                    <>
+                      {fields.map(({ key, name, ...restField }) => (
+                        <Card
+                          key={key}
+                          size="small"
+                          title={`第 ${name + 1} 天`}
+                          extra={
+                            <Button
+                              type="text"
+                              danger
+                              size="small"
+                              icon={<DeleteOutlined />}
+                              onClick={() => remove(name)}
+                            >
+                              删除
+                            </Button>
+                          }
+                          style={{ marginBottom: 12 }}
+                        >
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'day']}
+                            initialValue={name + 1}
+                            hidden
                           >
-                            删除
-                          </Button>
-                        }
-                        style={{ marginBottom: 12 }}
+                            <InputNumber />
+                          </Form.Item>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'activities']}
+                            label="活动安排"
+                            rules={[{ required: true, message: '请输入活动' }]}
+                          >
+                            <Input.TextArea
+                              placeholder="多个活动用逗号、顿号或换行分隔"
+                              autoSize={{ minRows: 2, maxRows: 6 }}
+                              onChange={(e) => {
+                                // 自动分割活动并保存为数组
+                                const activities = e.target.value.split(/[，,、\n]+/).filter(Boolean);
+                                const currentValues = form.getFieldValue('itinerary');
+                                currentValues[name].activities = activities;
+                                form.setFieldValue('itinerary', currentValues);
+                              }}
+                            />
+                          </Form.Item>
+                        </Card>
+                      ))}
+                      <Button
+                        type="dashed"
+                        onClick={() => add({ day: fields.length + 1, activities: [] })}
+                        block
+                        icon={<PlusOutlined />}
                       >
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'day']}
-                          initialValue={name + 1}
-                          hidden
-                        >
-                          <InputNumber />
-                        </Form.Item>
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'activities']}
-                          label="活动安排"
-                          rules={[{ required: true, message: '请输入活动' }]}
-                        >
-                          <Input.TextArea
-                            placeholder="多个活动用逗号、顿号或换行分隔"
-                            autoSize={{ minRows: 2, maxRows: 6 }}
-                            onChange={(e) => {
-                              // 自动分割活动并保存为数组
-                              const activities = e.target.value.split(/[，,、\n]+/).filter(Boolean);
-                              const currentValues = form.getFieldValue('itinerary');
-                              currentValues[name].activities = activities;
-                              form.setFieldValue('itinerary', currentValues);
-                            }}
-                          />
-                        </Form.Item>
-                      </Card>
-                    ))}
-                    <Button
-                      type="dashed"
-                      onClick={() => add({ day: fields.length + 1, activities: [] })}
-                      block
-                      icon={<PlusOutlined />}
-                    >
-                      添加一天行程
-                    </Button>
-                  </>
-                )}
-              </Form.List>
-            </Form.Item>
-          </Form>
-        )}
+                        添加一天行程
+                      </Button>
+                    </>
+                  )}
+                </Form.List>
+              </Form.Item>
+            </>
+          )}
+        </Form>
       </Card>
     </div>
   );

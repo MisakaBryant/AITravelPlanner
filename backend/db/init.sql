@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS public.users (
 CREATE TABLE IF NOT EXISTS public.plans (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT REFERENCES public.users(id) ON DELETE CASCADE,
+  origin TEXT,
   destination TEXT NOT NULL,
   days INTEGER NOT NULL,
   budget INTEGER NOT NULL,

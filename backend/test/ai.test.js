@@ -2,7 +2,7 @@ require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') }
 
 const request = require('supertest');
 const express = require('express');
-const aiRouter = require('../routes/ai');
+const aiRouter = require('../routes/parse');
 
 const app = express();
 app.use(express.json());
