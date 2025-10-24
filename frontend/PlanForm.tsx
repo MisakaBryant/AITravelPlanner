@@ -54,7 +54,19 @@ const PlanForm: React.FC<{ onResult: (result: any) => void }> = ({ onResult }) =
       });
       const data = await res.json();
       if (data.code === 0) {
-        onResult(data.data);
+        // 新增：自动解析 route_places
+        const itinerary = data.data.itinerary || [];
+        let route_places = [];
+        try {
+          const parseRes = await fetch('/api/route_places/parse', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ itinerary })
+          });
+          const parseData = await parseRes.json();
+          if (parseData.code === 0) route_places = parseData.data;
+        } catch {}
+        onResult({ ...data.data, route_places });
       } else {
         setError('生成行程失败');
       }

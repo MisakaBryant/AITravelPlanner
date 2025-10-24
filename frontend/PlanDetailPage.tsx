@@ -3,18 +3,21 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Button, Typography, Form, Input, InputNumber, message, Space, Descriptions, List, Table, Tag } from 'antd';
 import { EditOutlined, SaveOutlined, RollbackOutlined, EnvironmentOutlined, PlusOutlined, DeleteOutlined, DollarOutlined } from '@ant-design/icons';
 import MapView from './MapView';
+import { Image } from 'antd';
 
 const { Title } = Typography;
 
+
 interface Plan {
   id: number;
-    origin?: string;
+  origin?: string;
   destination: string;
   days: number;
   budget: number;
   people: number;
   preferences: string | string[];
   itinerary: Array<{ day: number; activities: string[] }>;
+  route_places?: Array<{ name: string; desc?: string; day?: number }>;
 }
 
 const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
@@ -89,16 +92,28 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
-      // 这里应该调用更新接口，目前简化为本地更新
-      const updated = {
-        ...plan!,
-        ...values,
-        preferences: values.preferences.split(/[，,、\s]+/).filter(Boolean),
-        itinerary: values.itinerary // 使用编辑后的行程
-      };
-      setPlan(updated);
+      const preferences = values.preferences.split(/[，,、\s]+/).filter(Boolean);
+      const itinerary = values.itinerary;
+      // 先解析 route_places
+      let route_places = [];
+      try {
+        const parseRes = await fetch('/api/route_places/parse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ itinerary })
+        });
+        const parseData = await parseRes.json();
+        if (parseData.code === 0) route_places = parseData.data;
+      } catch {}
+      // 更新后端
+      await fetch('/api/plan/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId: plan!.id, plan: { ...plan!, ...values, preferences, itinerary, route_places } })
+      });
+      setPlan({ ...plan!, ...values, preferences, itinerary, route_places });
       setEditing(false);
-      message.success('行程已更新（注：需要后端接口支持持久化）');
+      message.success('行程已更新');
     } catch (err) {
       message.error('请检查表单输入');
     }
@@ -163,6 +178,29 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
     },
   ];
 
+  // 地点图片缩略图组件
+  function PlaceThumb(props: { name: string }) {
+    const { name } = props;
+    const [url, setUrl] = React.useState<string | null>(null);
+    useEffect(() => {
+      if (!window.AMap) return;
+      window.AMap.plugin('AMap.PlaceSearch', function () {
+        const placeSearch = new window.AMap.PlaceSearch({ pageSize: 1 });
+        placeSearch.search(name, function(status: string, result: any) {
+          if (status === 'complete' && result?.poiList?.pois?.length) {
+            const poi = result.poiList.pois[0];
+            if (poi.photos && poi.photos.length > 0) setUrl(poi.photos[0].url);
+          }
+        });
+      });
+    }, [name]);
+    return url ? (
+      <Image src={url} width={64} height={48} style={{ objectFit: 'cover', borderRadius: 4, boxShadow: '0 1px 4px #eee' }} alt={name} />
+    ) : (
+      <div style={{ width: 64, height: 48, background: '#f5f5f5', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 12 }}>{name}</div>
+    );
+  }
+
   if (loading) return <Card loading />;
   if (!plan) return <Card>行程不存在</Card>;
 
@@ -213,8 +251,19 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
                 </Descriptions.Item>
               </Descriptions>
               <div style={{ marginTop: 24 }}>
-                <Title level={4}>地图位置</Title>
-                <MapView destination={plan.destination} itinerary={plan.itinerary} />
+                <Title level={4}>游览路线地图</Title>
+                <MapView destination={plan.destination} routePlaces={plan.route_places} />
+                {/* 路线图片缩略图展示 */}
+                {Array.isArray(plan.route_places) && plan.route_places.length > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <span style={{ color: '#888' }}>关键地点图片：</span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8 }}>
+                      {plan.route_places.slice(0, 6).map((p, idx) => (
+                        <PlaceThumb key={idx} name={p.name} />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <div style={{ marginTop: 24 }}>
                 <Title level={4}>详细行程</Title>

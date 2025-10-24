@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS public.plans (
   people INTEGER NOT NULL,
   preferences TEXT,
   itinerary JSONB,
+  route_places JSONB,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

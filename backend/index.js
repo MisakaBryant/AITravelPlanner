@@ -19,6 +19,8 @@ const userRouter = require('./routes/user');
 const planRouter = require('./routes/plan');
 const budgetRouter = require('./routes/budget');
 const parseRouter = require('./routes/parse');
+const routePlacesRouter = require('./routes/route_places');
+app.use('/api/route_places', auth, routePlacesRouter);
 
 // 统一鉴权
 app.use('/api', auth, userRouter);
