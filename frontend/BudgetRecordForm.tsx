@@ -16,15 +16,14 @@ const BudgetRecordForm: React.FC<{ userId: number; onSuccess: () => void }> = ({
   const [error, setError] = useState('');
   const [plans, setPlans] = useState<any[]>([]);
 
-  // 加载用户的行程列表
-  useEffect(() => {
+  const loadPlans = () => {
     if (!userId) return;
     fetch(`/api/plan/list?userId=${userId}`)
       .then(res => res.json())
       .then(data => {
         if (data.code === 0) setPlans(data.data || []);
       });
-  }, [userId]);
+  };
 
   const handleChange = (changed: Partial<typeof defaultForm>) => {
     setForm(prev => ({ ...prev, ...changed }));
@@ -72,6 +71,7 @@ const BudgetRecordForm: React.FC<{ userId: number; onSuccess: () => void }> = ({
           placeholder="请选择行程"
           value={form.planId}
           onChange={(value) => handleChange({ planId: value })}
+          onFocus={loadPlans}
         >
           {plans.map(p => (
             <Select.Option key={p.id} value={p.id}>
