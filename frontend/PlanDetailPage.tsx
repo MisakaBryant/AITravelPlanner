@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Button, Typography, Form, Input, InputNumber, message, Space, Descriptions, List, Table, Tag } from 'antd';
-import { EditOutlined, SaveOutlined, RollbackOutlined, EnvironmentOutlined, PlusOutlined, DeleteOutlined, DollarOutlined } from '@ant-design/icons';
+import { EditOutlined, SaveOutlined, RollbackOutlined, EnvironmentOutlined, PlusOutlined, DeleteOutlined, DollarOutlined, MenuOutlined } from '@ant-design/icons';
 import MapView from './MapView';
 import { Image } from 'antd';
 import isEqual from 'lodash.isequal';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 const { Title } = Typography;
 
@@ -30,6 +33,9 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
   const [records, setRecords] = useState<any[]>([]);
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [form] = Form.useForm();
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
+  );
 
   const normalizePreferences = (pref: any): string[] => {
     if (Array.isArray(pref)) return pref.map(String);
@@ -94,9 +100,9 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
     try {
       const values = await form.validateFields();
       const preferences = values.preferences.split(/[，,、\s]+/).filter(Boolean);
-      const itinerary = values.itinerary;
+      // 规范化天序号，防止拖拽后 day 字段未同步
+      const itinerary = (values.itinerary || []).map((d: any, idx: number) => ({ ...d, day: idx + 1 }));
       let route_places = [];
-      console.log('itinerary', itinerary, plan?.itinerary);
       if (!isEqual(itinerary, plan?.itinerary)) {
         // 先解析 route_places
         try {
@@ -185,6 +191,95 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
       key: 'date',
     },
   ];
+
+  // 可拖拽的活动行组件
+  function ActivitySortableRow({ id, actField, actIdx, addAct, removeAct }: { id: any, actField: any, actIdx: number, addAct: (init?: any, index?: number) => void, removeAct: (index: number) => void }) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+    const style: React.CSSProperties = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      display: 'flex',
+      alignItems: 'center',
+      marginBottom: 6,
+      background: isDragging ? '#f0f5ff' : undefined,
+      borderRadius: 4,
+      padding: 4,
+    };
+    // 移除 key，避免将 key 通过 props 传入到 Form.Item 造成 React 警告
+    const { key: _omitKey, ...fieldProps } = actField || {};
+    return (
+      <div ref={setNodeRef} style={style}>
+        <Button type="text" icon={<MenuOutlined />} {...attributes} {...listeners} style={{ cursor: 'grab', marginRight: 8 }} />
+        <Form.Item {...fieldProps} name={actField.name} style={{ flex: 1, marginBottom: 0 }} rules={[{ required: true, message: '请输入活动' }]}> 
+          <Input placeholder={`活动${actIdx + 1}`} />
+        </Form.Item>
+        <Button type="text" icon={<PlusOutlined />} onClick={() => addAct('', actIdx + 1)} />
+        <Button type="text" icon={<DeleteOutlined />} danger onClick={() => removeAct(actField.name)} />
+      </div>
+    );
+  }
+
+  // 可拖拽的“天”卡片组件，内部包含活动编辑（含拖拽）
+  function DaySortableCard({ id, dayIdx, name, restField, addDay, removeDay }: { id: any, dayIdx: number, name: number, restField: any, addDay: () => void, removeDay: () => void }) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+    const style: React.CSSProperties = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      marginBottom: 12,
+      background: isDragging ? '#fafcff' : undefined,
+      borderRadius: 6,
+    };
+    return (
+      <div ref={setNodeRef} style={style}>
+        <Card
+          size="small"
+          title={<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Button type="text" icon={<MenuOutlined />} {...attributes} {...listeners} style={{ cursor: 'grab' }} />第 {dayIdx + 1} 天</div>}
+          extra={
+            <>
+              <Button type="text" icon={<PlusOutlined />} onClick={addDay}>插入一天</Button>
+              <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={removeDay}>删除</Button>
+            </>
+          }
+        >
+          <Form.Item {...restField} name={[name, 'day']} initialValue={dayIdx + 1} hidden>
+            <InputNumber />
+          </Form.Item>
+          <Form.List name={[name, 'activities']}>
+            {(acts, { add: addAct, remove: removeAct, move: moveAct }) => {
+              const ids = acts.map((f: any) => f.key);
+              const onDragEnd = (event: any) => {
+                const { active, over } = event || {};
+                if (!active || !over || active.id === over.id) return;
+                const oldIndex = ids.indexOf(active.id);
+                const newIndex = ids.indexOf(over.id);
+                if (oldIndex < 0 || newIndex < 0) return;
+                moveAct(oldIndex, newIndex);
+              };
+              return (
+                <>
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+                    <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+                      {acts.map((actField: any, actIdx: number) => (
+                        <ActivitySortableRow
+                          key={actField.key}
+                          id={actField.key}
+                          actField={actField}
+                          actIdx={actIdx}
+                          addAct={addAct}
+                          removeAct={removeAct}
+                        />
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+                  <Button type="dashed" onClick={() => addAct('')} block icon={<PlusOutlined />}>新增活动</Button>
+                </>
+              );
+            }}
+          </Form.List>
+        </Card>
+      </div>
+    );
+  }
 
   // 地点图片缩略图组件
   function PlaceThumb(props: { name: string }) {
@@ -348,47 +443,38 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
               </Form.Item>
               <Form.Item label="详细行程" name="itinerary">
                 <Form.List name="itinerary">
-                  {(fields, { add, remove, move }) => (
-                    <>
-                      {fields.map(({ key, name, ...restField }, dayIdx) => (
-                        <Card
-                          key={key}
-                          size="small"
-                          title={`第 ${dayIdx + 1} 天`}
-                          extra={
-                            <>
-                              <Button type="text" icon={<PlusOutlined />} onClick={() => add({ day: dayIdx + 2, activities: [] }, dayIdx + 1)}>插入一天</Button>
-                              <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => remove(name)}>删除</Button>
-                            </>
-                          }
-                          style={{ marginBottom: 12 }}
-                        >
-                          <Form.Item {...restField} name={[name, 'day']} initialValue={dayIdx + 1} hidden>
-                            <InputNumber />
-                          </Form.Item>
-                          <Form.List name={[name, 'activities']}>
-                            {(acts, { add: addAct, remove: removeAct, move: moveAct }) => (
-                              <>
-                                {acts.map((actField, actIdx) => (
-                                  <div key={actField.key} style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
-                                    <Form.Item {...actField} name={actField.name} style={{ flex: 1, marginBottom: 0 }} rules={[{ required: true, message: '请输入活动' }]}> 
-                                      <Input placeholder={`活动${actIdx + 1}`} />
-                                    </Form.Item>
-                                    <Button type="text" icon={<PlusOutlined />} onClick={() => addAct('', actIdx + 1)} />
-                                    <Button type="text" icon={<DeleteOutlined />} danger onClick={() => removeAct(actField.name)} />
-                                    {actIdx > 0 && <Button type="text" onClick={() => moveAct(actIdx, actIdx - 1)}>↑</Button>}
-                                    {actIdx < acts.length - 1 && <Button type="text" onClick={() => moveAct(actIdx, actIdx + 1)}>↓</Button>}
-                                  </div>
-                                ))}
-                                <Button type="dashed" onClick={() => addAct('')} block icon={<PlusOutlined />}>新增活动</Button>
-                              </>
-                            )}
-                          </Form.List>
-                        </Card>
-                      ))}
-                      <Button type="dashed" onClick={() => add({ day: fields.length + 1, activities: [] })} block icon={<PlusOutlined />}>添加一天行程</Button>
-                    </>
-                  )}
+                  {(fields, { add, remove, move }) => {
+                    const dayIds = fields.map((f: any) => f.key);
+                    const onDayDragEnd = (event: any) => {
+                      const { active, over } = event || {};
+                      if (!active || !over || active.id === over.id) return;
+                      const oldIndex = dayIds.indexOf(active.id);
+                      const newIndex = dayIds.indexOf(over.id);
+                      if (oldIndex < 0 || newIndex < 0) return;
+                      // 使用 antd 的 move 以避免回弹
+                      move(oldIndex, newIndex);
+                    };
+                    return (
+                      <>
+                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDayDragEnd}>
+                          <SortableContext items={dayIds} strategy={verticalListSortingStrategy}>
+                            {fields.map(({ key, name, ...restField }, dayIdx) => (
+                              <DaySortableCard
+                                key={key}
+                                id={key}
+                                dayIdx={dayIdx}
+                                name={name}
+                                restField={restField}
+                                addDay={() => add({ day: dayIdx + 2, activities: [] }, dayIdx + 1)}
+                                removeDay={() => remove(name)}
+                              />
+                            ))}
+                          </SortableContext>
+                        </DndContext>
+                        <Button type="dashed" onClick={() => add({ day: fields.length + 1, activities: [] })} block icon={<PlusOutlined />}>添加一天行程</Button>
+                      </>
+                    );
+                  }}
                 </Form.List>
               </Form.Item>
             </>
