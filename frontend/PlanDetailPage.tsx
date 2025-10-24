@@ -104,12 +104,40 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
     }
   };
 
-  // 导航到目的地（打开高德地图导航）
+  // 导航到目的地（打开高德地图导航，起点为当前位置）
   const handleNavigate = () => {
     if (!plan) return;
     const keyword = plan.destination;
-    // 打开高德地图Web端导航（或调用APP端URL Scheme）
-    window.open(`https://uri.amap.com/navigation?to=${encodeURIComponent(keyword)},全国`, '_blank');
+    if (!window.AMap) {
+      window.open(`https://uri.amap.com/navigation?to=${encodeURIComponent(keyword)}`, '_blank');
+      return;
+    }
+    // 获取当前位置
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          const geocoder = new window.AMap.Geocoder({ city: '全国' });
+          geocoder.getLocation(keyword, (status: string, result: any) => {
+            if (status === 'complete' && result?.geocodes?.length) {
+              const loc = result.geocodes[0].location;
+              const url = `https://uri.amap.com/navigation?from=${longitude},${latitude},我的位置&to=${loc.lng},${loc.lat},${encodeURIComponent(keyword)}`;
+              window.open(url, '_blank');
+            } else {
+              // 兜底：只用地名
+              window.open(`https://uri.amap.com/navigation?to=${encodeURIComponent(keyword)}`, '_blank');
+            }
+          });
+        },
+        () => {
+          // 获取定位失败，仍然只用地名
+          window.open(`https://uri.amap.com/navigation?to=${encodeURIComponent(keyword)}`, '_blank');
+        }
+      );
+    } else {
+      // 不支持定位
+      window.open(`https://uri.amap.com/navigation?to=${encodeURIComponent(keyword)}`, '_blank');
+    }
   };
 
   // 计算总开销

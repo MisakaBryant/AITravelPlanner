@@ -7,7 +7,7 @@ export default defineConfig({
     port: 15173,
     open: true,
     proxy: {
-      '/api': 'http://localhost:3001'
+      '/api': 'http://localhost:3001',
     }
   }
 });
