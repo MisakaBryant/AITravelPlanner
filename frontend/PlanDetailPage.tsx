@@ -167,7 +167,7 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
   if (!plan) return <Card>行程不存在</Card>;
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px' }}>
+    <div style={{ maxWidth: 1400, margin: '0 auto', padding: '24px' }}>
       <Button icon={<RollbackOutlined />} onClick={() => navigate('/home')} style={{ marginBottom: 16 }}>
         返回首页
       </Button>

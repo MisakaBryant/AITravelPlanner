@@ -31,6 +31,7 @@ const App: React.FC = () => {
   const [recordMsg, setRecordMsg] = useState('');
   const [user, setUser] = useState<any>(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [planListRefreshKey, setPlanListRefreshKey] = useState(0);
 
   // 初始化：检测后端登录态
   useEffect(() => {
@@ -60,6 +61,7 @@ const App: React.FC = () => {
       body: JSON.stringify({ userId: user.id, plan })
     });
     alert('行程已保存到账号！');
+    setPlanListRefreshKey(k => k + 1); // 强制刷新 PlanList
   };
 
   return (
@@ -127,7 +129,7 @@ const App: React.FC = () => {
                             )}
                           </Card>
                         )}
-                        <PlanList userId={user.id} />
+                        <PlanList userId={user.id} key={planListRefreshKey} />
                       </Col>
                       {/* 右侧：预算与开销管理 */}
                       <Col xs={24} lg={8}>

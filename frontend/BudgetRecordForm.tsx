@@ -101,7 +101,7 @@ const BudgetRecordForm: React.FC<{ userId: number; onSuccess: () => void }> = ({
       <Form.Item label="日期" required>
         <DatePicker
           style={{ width: '100%' }}
-          value={form.date ? dayjs(form.date) : undefined}
+          value={form.date ? dayjs(form.date) : dayjs(Date.now())}
           onChange={d => handleChange({ date: d ? d.format('YYYY-MM-DD') : '' })}
         />
       </Form.Item>
