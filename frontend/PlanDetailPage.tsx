@@ -4,6 +4,7 @@ import { Card, Button, Typography, Form, Input, InputNumber, message, Space, Des
 import { EditOutlined, SaveOutlined, RollbackOutlined, EnvironmentOutlined, PlusOutlined, DeleteOutlined, DollarOutlined } from '@ant-design/icons';
 import MapView from './MapView';
 import { Image } from 'antd';
+import isEqual from 'lodash.isequal';
 
 const { Title } = Typography;
 
@@ -55,15 +56,15 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
           if (found) {
             setPlan(found);
             form.setFieldsValue({
-                origin: found.origin || '',
-                destination: found.destination,
-                days: found.days,
-                budget: found.budget,
-                people: found.people,
-                preferences: normalizePreferences(found.preferences).join('、'),
+              origin: found.origin || '',
+              destination: found.destination,
+              days: found.days,
+              budget: found.budget,
+              people: found.people,
+              preferences: normalizePreferences(found.preferences).join('、'),
               itinerary: found.itinerary?.map((item: any) => ({
                 day: item.day,
-                activities: Array.isArray(item.activities) ? item.activities.join('、') : item.activities
+                activities: Array.isArray(item.activities) ? item.activities : (typeof item.activities === 'string' ? [item.activities] : [])
               })) || []
             });
           } else {
@@ -94,28 +95,35 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
       const values = await form.validateFields();
       const preferences = values.preferences.split(/[，,、\s]+/).filter(Boolean);
       const itinerary = values.itinerary;
-      // 先解析 route_places
       let route_places = [];
-      try {
-        const parseRes = await fetch('/api/route_places/parse', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ itinerary })
-        });
-        const parseData = await parseRes.json();
-        if (parseData.code === 0) route_places = parseData.data;
-      } catch {}
+      console.log('itinerary', itinerary, plan?.itinerary);
+      if (!isEqual(itinerary, plan?.itinerary)) {
+        // 先解析 route_places
+        try {
+          const parseRes = await fetch('/api/route_places/parse', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ itinerary })
+          });
+          const parseData = await parseRes.json();
+          if (parseData.code === 0) route_places = parseData.data;
+        } catch {}
+      }
       // 更新后端
       await fetch('/api/plan/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ planId: plan!.id, plan: { ...plan!, ...values, preferences, itinerary, route_places } })
+      }).then(res => {
+        if (res.status !== 200) {
+          throw new Error('保存失败');
+        }
       });
       setPlan({ ...plan!, ...values, preferences, itinerary, route_places });
       setEditing(false);
       message.success('行程已更新');
     } catch (err) {
-      message.error('请检查表单输入');
+      message.error('更新失败');
     }
   };
 
@@ -269,8 +277,13 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
                 <Title level={4}>详细行程</Title>
                 <ol style={{ lineHeight: 2 }}>
                   {plan.itinerary?.map((d: any) => (
-                    <li key={d.day}>
-                      <strong>第{d.day}天：</strong>{d.activities.join('，')}
+                    <li key={d.day} style={{ marginBottom: 8 }}>
+                      <strong>第{d.day}天：</strong>
+                      <ul style={{ margin: '4px 0 0 24px', padding: 0 }}>
+                        {Array.isArray(d.activities) ? d.activities.map((act: string, idx: number) => (
+                          <li key={idx} style={{ listStyle: 'disc', margin: 0 }}>{act}</li>
+                        )) : null}
+                      </ul>
                     </li>
                   ))}
                 </ol>
@@ -335,62 +348,45 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
               </Form.Item>
               <Form.Item label="详细行程" name="itinerary">
                 <Form.List name="itinerary">
-                  {(fields, { add, remove }) => (
+                  {(fields, { add, remove, move }) => (
                     <>
-                      {fields.map(({ key, name, ...restField }) => (
+                      {fields.map(({ key, name, ...restField }, dayIdx) => (
                         <Card
                           key={key}
                           size="small"
-                          title={`第 ${name + 1} 天`}
+                          title={`第 ${dayIdx + 1} 天`}
                           extra={
-                            <Button
-                              type="text"
-                              danger
-                              size="small"
-                              icon={<DeleteOutlined />}
-                              onClick={() => remove(name)}
-                            >
-                              删除
-                            </Button>
+                            <>
+                              <Button type="text" icon={<PlusOutlined />} onClick={() => add({ day: dayIdx + 2, activities: [] }, dayIdx + 1)}>插入一天</Button>
+                              <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => remove(name)}>删除</Button>
+                            </>
                           }
                           style={{ marginBottom: 12 }}
                         >
-                          <Form.Item
-                            {...restField}
-                            name={[name, 'day']}
-                            initialValue={name + 1}
-                            hidden
-                          >
+                          <Form.Item {...restField} name={[name, 'day']} initialValue={dayIdx + 1} hidden>
                             <InputNumber />
                           </Form.Item>
-                          <Form.Item
-                            {...restField}
-                            name={[name, 'activities']}
-                            label="活动安排"
-                            rules={[{ required: true, message: '请输入活动' }]}
-                          >
-                            <Input.TextArea
-                              placeholder="多个活动用逗号、顿号或换行分隔"
-                              autoSize={{ minRows: 2, maxRows: 6 }}
-                              onChange={(e) => {
-                                // 自动分割活动并保存为数组
-                                const activities = e.target.value.split(/[，,、\n]+/).filter(Boolean);
-                                const currentValues = form.getFieldValue('itinerary');
-                                currentValues[name].activities = activities;
-                                form.setFieldValue('itinerary', currentValues);
-                              }}
-                            />
-                          </Form.Item>
+                          <Form.List name={[name, 'activities']}>
+                            {(acts, { add: addAct, remove: removeAct, move: moveAct }) => (
+                              <>
+                                {acts.map((actField, actIdx) => (
+                                  <div key={actField.key} style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
+                                    <Form.Item {...actField} name={actField.name} style={{ flex: 1, marginBottom: 0 }} rules={[{ required: true, message: '请输入活动' }]}> 
+                                      <Input placeholder={`活动${actIdx + 1}`} />
+                                    </Form.Item>
+                                    <Button type="text" icon={<PlusOutlined />} onClick={() => addAct('', actIdx + 1)} />
+                                    <Button type="text" icon={<DeleteOutlined />} danger onClick={() => removeAct(actField.name)} />
+                                    {actIdx > 0 && <Button type="text" onClick={() => moveAct(actIdx, actIdx - 1)}>↑</Button>}
+                                    {actIdx < acts.length - 1 && <Button type="text" onClick={() => moveAct(actIdx, actIdx + 1)}>↓</Button>}
+                                  </div>
+                                ))}
+                                <Button type="dashed" onClick={() => addAct('')} block icon={<PlusOutlined />}>新增活动</Button>
+                              </>
+                            )}
+                          </Form.List>
                         </Card>
                       ))}
-                      <Button
-                        type="dashed"
-                        onClick={() => add({ day: fields.length + 1, activities: [] })}
-                        block
-                        icon={<PlusOutlined />}
-                      >
-                        添加一天行程
-                      </Button>
+                      <Button type="dashed" onClick={() => add({ day: fields.length + 1, activities: [] })} block icon={<PlusOutlined />}>添加一天行程</Button>
                     </>
                   )}
                 </Form.List>
