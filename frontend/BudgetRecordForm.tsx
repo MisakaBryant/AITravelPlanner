@@ -5,7 +5,8 @@ import dayjs from 'dayjs';
 const defaultForm = {
   item: '',
   amount: '',
-  date: '',
+  // 初始化为今天，避免首次渲染时 form.date 为空但界面显示“今天”造成的错觉
+  date: dayjs().format('YYYY-MM-DD'),
   planId: undefined as number | undefined
 };
 
@@ -101,8 +102,9 @@ const BudgetRecordForm: React.FC<{ userId: number; onSuccess: () => void }> = ({
       <Form.Item label="日期" required>
         <DatePicker
           style={{ width: '100%' }}
-          value={form.date ? dayjs(form.date) : dayjs(Date.now())}
-          onChange={d => handleChange({ date: d ? d.format('YYYY-MM-DD') : '' })}
+          placeholder="请选择日期"
+          value={form.date ? dayjs(form.date, 'YYYY-MM-DD') : null}
+          onChange={(d) => handleChange({ date: d ? d.format('YYYY-MM-DD') : '' })}
         />
       </Form.Item>
       <Button type="primary" htmlType="submit" loading={loading} block>

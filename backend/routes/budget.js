@@ -62,7 +62,10 @@ router.post('/budget/record', async (req, res) => {
   const { error } = await supabase
     .from('records')
     .insert([{ user_id: userId, item, amount, date, plan_id: planId }]);
-  if (error) return res.json({ code: 2, msg: '记录失败' });
+  if (error) {
+    console.error('记录失败', error);
+    return res.json({ code: 2, msg: '记录失败' });
+  }
   res.json({ code: 0, msg: '记录成功' });
 });
 
