@@ -4,6 +4,7 @@ const router = express.Router();
 
 // 使用通用 AI 客户端
 const { callLLM } = require('../utils/aiClient');
+const supabase = require('../utils/supabase');
 
 // POST /api/plan
 // body: { origin, destination, days, budget, preferences, people }
@@ -27,6 +28,57 @@ router.post('/plan', async (req, res) => {
   } catch (e) {
     console.error(e);
     res.json({ code: 2, msg: '大模型生成失败' });
+  }
+});
+
+// POST /api/plan/save
+// body: { userId, plan }
+// 说明：plan 需包含 route_places 字段（由前端主动解析并传入）
+router.post('/plan/save', async (req, res) => {
+  const { userId, plan } = req.body;
+  try {
+    const { error } = await supabase
+      .from('plans')
+      .insert([{ user_id: userId, ...plan }]);
+    if (error) return res.json({ code: 2, msg: '保存失败' });
+    res.json({ code: 0, msg: '保存成功' });
+  } catch (e) {
+    console.error(e);
+    res.json({ code: 2, msg: '保存失败' });
+  }
+});
+
+// POST /api/plan/update
+// body: { planId, plan }
+// 说明：编辑行程时，前端需主动解析 route_places 并传入
+router.post('/plan/update', async (req, res) => {
+  const { planId, plan } = req.body;
+  try {
+    const { error } = await supabase
+      .from('plans')
+      .update({ ...plan })
+      .eq('id', planId);
+    if (error) return res.json({ code: 2, msg: '更新失败' });
+    res.json({ code: 0, msg: '更新成功' });
+  } catch (e) {
+    console.error(e);
+    res.json({ code: 2, msg: '更新失败' });
+  }
+});
+
+// GET /api/plan/list?userId=1
+router.get('/plan/list', async (req, res) => {
+  const { userId } = req.query;
+  try {
+    const { data, error } = await supabase
+      .from('plans')
+      .select('*')
+      .eq('user_id', userId);
+    if (error) return res.json({ code: 2, msg: '查询失败' });
+    res.json({ code: 0, data: data || [] });
+  } catch (e) {
+    console.error(e);
+    res.json({ code: 2, msg: '查询失败' });
   }
 });
 

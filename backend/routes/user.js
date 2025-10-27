@@ -53,38 +53,6 @@ router.post('/auth/logout', (req, res) => {
   res.json({ code: 0, msg: '已登出' });
 });
 
-// POST /api/plan/save
-router.post('/plan/save', async (req, res) => {
-  const { userId, plan } = req.body;
-  // plan 需包含 route_places 字段（由前端主动解析并传入）
-  const { error } = await supabase
-    .from('plans')
-    .insert([{ user_id: userId, ...plan }]);
-  if (error) return res.json({ code: 2, msg: '保存失败' });
-  res.json({ code: 0, msg: '保存成功' });
-// POST /api/plan/update
-// 编辑行程时，前端需主动解析 route_places 并传入
-router.post('/plan/update', async (req, res) => {
-  const { planId, plan } = req.body;
-  const { error } = await supabase
-    .from('plans')
-    .update({ ...plan })
-    .eq('id', planId);
-  if (error) return res.json({ code: 2, msg: '更新失败' });
-  res.json({ code: 0, msg: '更新成功' });
-});
-});
-
-// GET /api/plan/list?userId=1
-router.get('/plan/list', async (req, res) => {
-  const { userId } = req.query;
-  const { data, error } = await supabase
-    .from('plans')
-    .select('*')
-    .eq('user_id', userId);
-  if (error) return res.json({ code: 2, msg: '查询失败' });
-  res.json({ code: 0, data: data || [] });
-});
 
 // GET /api/auth/check
 router.get('/auth/check', (req, res) => {
