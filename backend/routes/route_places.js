@@ -9,7 +9,7 @@ const { callLLM } = require('../utils/aiClient');
 router.post('/parse', async (req, res) => {
   const { itinerary } = req.body;
   if (!Array.isArray(itinerary)) return res.json({ code: 1, msg: '参数错误' });
-  const prompt = `请根据以下行程安排，提取游览顺序地点数组，字段为 name, desc, day，JSON数组返回。行程安排：${JSON.stringify(itinerary)}`;
+  const prompt = `请根据以下行程安排，提取游览顺序地点数组，字段为 name, desc, day，JSON数组返回，其中 name 应该包含城市名防止重名地点。行程安排：${JSON.stringify(itinerary)}`;
   try {
     const result = await callLLM(prompt);
     if (Array.isArray(result)) {

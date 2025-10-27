@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Button, Typography, Form, Input, InputNumber, message, Space, Descriptions, List, Table, Tag } from 'antd';
+import { Card, Button, Typography, Form, Input, InputNumber, message, Space, Descriptions, List, Table, Tag, Spin } from 'antd';
 import { EditOutlined, SaveOutlined, RollbackOutlined, EnvironmentOutlined, PlusOutlined, DeleteOutlined, DollarOutlined, MenuOutlined } from '@ant-design/icons';
 import MapView from './MapView';
-import { Image } from 'antd';
 import isEqual from 'lodash.isequal';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
@@ -14,7 +13,7 @@ const { Title } = Typography;
 
 interface Plan {
   id: number;
-  origin?: string;
+  origin: string;
   destination: string;
   days: number;
   budget: number;
@@ -30,6 +29,8 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savingTip, setSavingTip] = useState<string>('');
   const [records, setRecords] = useState<any[]>([]);
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [form] = Form.useForm();
@@ -98,6 +99,8 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
   // 保存编辑
   const handleSave = async () => {
     try {
+      setSaving(true);
+      setSavingTip('正在保存...');
       const values = await form.validateFields();
       const preferences = values.preferences.split(/[，,、\s]+/).filter(Boolean);
       // 规范化天序号，防止拖拽后 day 字段未同步
@@ -106,6 +109,7 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
       if (!isEqual(itinerary, plan?.itinerary)) {
         // 先解析 route_places
         try {
+          setSavingTip('正在解析路线...');
           const parseRes = await fetch('/api/route_places/parse', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -115,6 +119,7 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
           if (parseData.code === 0) route_places = parseData.data;
         } catch {}
       }
+      setSavingTip('正在保存...');
       // 更新后端
       await fetch('/api/plan/update', {
         method: 'POST',
@@ -130,6 +135,9 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
       message.success('行程已更新');
     } catch (err) {
       message.error('更新失败');
+    } finally {
+      setSaving(false);
+      setSavingTip('');
     }
   };
 
@@ -205,7 +213,6 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
       borderRadius: 4,
       padding: 4,
     };
-    // 移除 key，避免将 key 通过 props 传入到 Form.Item 造成 React 警告
     const { key: _omitKey, ...fieldProps } = actField || {};
     return (
       <div ref={setNodeRef} style={style}>
@@ -281,29 +288,6 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
     );
   }
 
-  // 地点图片缩略图组件
-  function PlaceThumb(props: { name: string }) {
-    const { name } = props;
-    const [url, setUrl] = React.useState<string | null>(null);
-    useEffect(() => {
-      if (!window.AMap) return;
-      window.AMap.plugin('AMap.PlaceSearch', function () {
-        const placeSearch = new window.AMap.PlaceSearch({ pageSize: 1 });
-        placeSearch.search(name, function(status: string, result: any) {
-          if (status === 'complete' && result?.poiList?.pois?.length) {
-            const poi = result.poiList.pois[0];
-            if (poi.photos && poi.photos.length > 0) setUrl(poi.photos[0].url);
-          }
-        });
-      });
-    }, [name]);
-    return url ? (
-      <Image src={url} width={64} height={48} style={{ objectFit: 'cover', borderRadius: 4, boxShadow: '0 1px 4px #eee' }} alt={name} />
-    ) : (
-      <div style={{ width: 64, height: 48, background: '#f5f5f5', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 12 }}>{name}</div>
-    );
-  }
-
   if (loading) return <Card loading />;
   if (!plan) return <Card>行程不存在</Card>;
 
@@ -340,7 +324,8 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
           </Space>
         }
       >
-        <Form form={form} layout="vertical" component="div">
+  <Spin spinning={saving} tip={savingTip}>
+  <Form form={form} layout="vertical" component="div">
           {!editing ? (
             <>
               <Descriptions bordered column={2}>
@@ -356,17 +341,6 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
               <div style={{ marginTop: 24 }}>
                 <Title level={4}>游览路线地图</Title>
                 <MapView destination={plan.destination} routePlaces={plan.route_places} />
-                {/* 路线图片缩略图展示 */}
-                {Array.isArray(plan.route_places) && plan.route_places.length > 0 && (
-                  <div style={{ marginTop: 16 }}>
-                    <span style={{ color: '#888' }}>关键地点图片：</span>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8 }}>
-                      {plan.route_places.slice(0, 6).map((p, idx) => (
-                        <PlaceThumb key={idx} name={p.name} />
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
               <div style={{ marginTop: 24 }}>
                 <Title level={4}>详细行程</Title>
@@ -423,7 +397,7 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
             </>
           ) : (
             <>
-              <Form.Item label="出发地" name="origin">
+              <Form.Item label="出发地" name="origin" rules={[{ required: true }]}>
                 <Input />
               </Form.Item>
               <Form.Item label="目的地" name="destination" rules={[{ required: true }]}>
@@ -480,6 +454,7 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
             </>
           )}
         </Form>
+        </Spin>
       </Card>
     </div>
   );
