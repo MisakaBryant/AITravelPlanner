@@ -8,6 +8,7 @@ import AuthForm, { checkAuth, logout as apiLogout } from './AuthForm';
 import PlanList from './PlanList';
 import PlanDetailPage from './PlanDetailPage';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { CompassOutlined } from '@ant-design/icons';
 
 const { Header, Content, Footer } = Layout;
 const { Title } = Typography;
@@ -66,8 +67,53 @@ const App: React.FC = () => {
 
   return (
     <Layout style={{ minHeight: '100vh', background: '#f5f6fa' }}>
-      <Header style={{ background: '#1677ff', padding: '0 32px' }}>
-        <Title level={2} style={{ color: '#fff', margin: 0, textAlign: 'center' }}>AITravelPlanner 智能旅行规划</Title>
+      <Header
+        style={{
+          background: 'linear-gradient(90deg, #165DFF 0%, #4096ff 50%, #2f54eb 100%)',
+          padding: '0 32px',
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
+          boxShadow: '0 8px 24px rgba(22,119,255,0.25)'
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 1400,
+            margin: '0 auto',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: 64
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '8px 16px',
+              borderRadius: 12,
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              backdropFilter: 'blur(2px)'
+            }}
+          >
+            <CompassOutlined style={{ color: '#fff', fontSize: 22 }} />
+            <Title
+              level={3}
+              style={{
+                color: '#fff',
+                margin: 0,
+                textAlign: 'center',
+                letterSpacing: 0.5,
+                textShadow: '0 1px 1px rgba(0,0,0,0.25)'
+              }}
+            >
+              AITravelPlanner 智能旅行规划
+            </Title>
+          </div>
+        </div>
       </Header>
       <Content style={{ maxWidth: 1400, margin: '32px auto', width: '100%', padding: '0 16px' }}>
         {!authChecked ? (
