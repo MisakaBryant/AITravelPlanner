@@ -61,7 +61,7 @@ const App: React.FC = () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId: user.id, plan })
     });
-    alert('行程已保存到账号！');
+    message.success('行程已保存到账号！');
     setPlanListRefreshKey(k => k + 1); // 强制刷新 PlanList
   };
 

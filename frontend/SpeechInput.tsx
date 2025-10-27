@@ -1,6 +1,6 @@
 
 import React, { useRef, useState } from 'react';
-import { Button, Tooltip } from 'antd';
+import { Button, Tooltip, message } from 'antd';
 
 const SpeechInput: React.FC<{ onResult: (text: string) => void }> = ({ onResult }) => {
   const recognitionRef = useRef<any>(null);
@@ -8,7 +8,7 @@ const SpeechInput: React.FC<{ onResult: (text: string) => void }> = ({ onResult 
 
   const startRecognition = () => {
     if (!('webkitSpeechRecognition' in window)) {
-      alert('当前浏览器不支持语音识别');
+      message.warning('当前浏览器不支持语音识别');
       return;
     }
     const recognition = new (window as any).webkitSpeechRecognition();
@@ -20,7 +20,7 @@ const SpeechInput: React.FC<{ onResult: (text: string) => void }> = ({ onResult 
       onResult(text);
     };
     recognition.onerror = () => {
-      alert('语音识别失败');
+      message.error('语音识别失败');
     };
     recognition.onend = () => {
       setRecording(false);
