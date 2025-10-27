@@ -51,7 +51,7 @@ router.post('/budget/estimate', async (req, res) => {
 
 // POST /api/budget/record
 // body: { userId, item, amount, date, planId }
-router.post('/budget/record', async (req, res) => {
+router.post('/budget/record/save', async (req, res) => {
   const { userId, item, amount, date, planId } = req.body;
   
   // 验证必填字段
@@ -67,6 +67,46 @@ router.post('/budget/record', async (req, res) => {
     return res.json({ code: 2, msg: '记录失败' });
   }
   res.json({ code: 0, msg: '记录成功' });
+});
+
+// POST /api/budget/record/update
+// body: { id, item, amount, date }
+router.post('/budget/record/update', async (req, res) => {
+  const { id, item, amount, date } = req.body || {};
+  if (!id) return res.json({ code: 1, msg: '缺少记录ID' });
+  try {
+    const { error } = await supabase
+      .from('records')
+      .update({
+        item: String(item || ''),
+        amount: Number(amount || 0),
+        date: String(date || ''),
+      })
+      .eq('id', id)
+      .eq('user_id', req.userId);
+    if (error) return res.json({ code: 2, msg: '更新失败' });
+    return res.json({ code: 0, msg: '更新成功' });
+  } catch (e) {
+    return res.json({ code: 2, msg: '更新失败' });
+  }
+});
+
+// POST /api/budget/record/delete
+// body: { id }
+router.post('/budget/record/delete', async (req, res) => {
+  const { id } = req.body || {};
+  if (!id) return res.json({ code: 1, msg: '缺少记录ID' });
+  try {
+    const { error } = await supabase
+      .from('records')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', req.userId);
+    if (error) return res.json({ code: 2, msg: '删除失败' });
+    return res.json({ code: 0, msg: '删除成功' });
+  } catch (e) {
+    return res.json({ code: 2, msg: '删除失败' });
+  }
 });
 
 module.exports = router;

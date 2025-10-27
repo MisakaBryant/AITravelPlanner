@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Button, Typography, Form, Input, InputNumber, message, Space, Descriptions, List, Table, Tag, Spin } from 'antd';
+import { Card, Button, Typography, Form, Input, InputNumber, message, Space, Descriptions, List, Table, Tag, Spin, DatePicker, Popconfirm } from 'antd';
+import dayjs from 'dayjs';
 import { EditOutlined, SaveOutlined, RollbackOutlined, EnvironmentOutlined, PlusOutlined, DeleteOutlined, DollarOutlined, MenuOutlined } from '@ant-design/icons';
 import MapView from './MapView';
 import isEqual from 'lodash.isequal';
@@ -33,6 +34,10 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
   const [savingTip, setSavingTip] = useState<string>('');
   const [records, setRecords] = useState<any[]>([]);
   const [recordsLoading, setRecordsLoading] = useState(false);
+  const [editingRecordId, setEditingRecordId] = useState<number | null>(null);
+  const [editRecord, setEditRecord] = useState<{ item: string; amount: number; date: string }>({ item: '', amount: 0, date: '' });
+  const [recordSaving, setRecordSaving] = useState(false);
+  const [recordDeletingId, setRecordDeletingId] = useState<number | null>(null);
   const [form] = Form.useForm();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
@@ -181,23 +186,136 @@ const PlanDetailPage: React.FC<{ userId: number }> = ({ userId }) => {
   const totalExpense = records.reduce((sum, r) => sum + Number(r.amount || 0), 0);
 
   // 开销记录表格列定义
+  const startEditRecord = (r: any) => {
+    setEditingRecordId(r.id);
+    setEditRecord({ item: r.item || '', amount: Number(r.amount || 0), date: r.date || '' });
+  };
+
+  const cancelEditRecord = () => {
+    setEditingRecordId(null);
+  };
+
+  const saveEditRecord = async (id: number) => {
+    if (!editRecord.item?.trim()) {
+      message.warning('请输入项目');
+      return;
+    }
+    if (editRecord.amount == null || isNaN(editRecord.amount)) {
+      message.warning('请输入有效金额');
+      return;
+    }
+    if (!editRecord.date) {
+      message.warning('请选择日期');
+      return;
+    }
+    try {
+      setRecordSaving(true);
+      const res = await fetch('/api/budget/record/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ...editRecord })
+      });
+      const data = await res.json();
+      if (data.code !== 0) throw new Error('更新失败');
+      setRecords(prev => prev.map(r => (r.id === id ? { ...r, ...editRecord } : r)));
+      setEditingRecordId(null);
+      message.success('已更新开销');
+    } catch (e) {
+      message.error('更新失败');
+    } finally {
+      setRecordSaving(false);
+    }
+  };
+
+  const deleteRecord = async (id: number) => {
+    try {
+      setRecordDeletingId(id);
+      const res = await fetch('/api/budget/record/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      if (data.code !== 0) throw new Error('删除失败');
+      setRecords(prev => prev.filter(r => r.id !== id));
+      message.success('已删除开销');
+    } catch (e) {
+      message.error('删除失败');
+    } finally {
+      setRecordDeletingId(null);
+    }
+  };
+
   const recordColumns = [
     {
       title: '项目',
       dataIndex: 'item',
       key: 'item',
+      render: (_: any, record: any) => (
+        editingRecordId === record.id ? (
+          <Input
+            value={editRecord.item}
+            onChange={e => setEditRecord(prev => ({ ...prev, item: e.target.value }))}
+            placeholder="如 午餐、门票"
+          />
+        ) : (
+          <span>{record.item}</span>
+        )
+      )
     },
     {
       title: '金额',
       dataIndex: 'amount',
       key: 'amount',
-      render: (amount: number) => <span style={{ color: '#f5222d', fontWeight: 'bold' }}>¥{amount}</span>
+      render: (_: any, record: any) => (
+        editingRecordId === record.id ? (
+          <InputNumber
+            min={0}
+            value={editRecord.amount}
+            onChange={(v) => setEditRecord(prev => ({ ...prev, amount: Number(v || 0) }))}
+            style={{ width: '100%' }}
+          />
+        ) : (
+          <span style={{ color: '#f5222d', fontWeight: 'bold' }}>¥{Number(record.amount || 0)}</span>
+        )
+      )
     },
     {
       title: '日期',
       dataIndex: 'date',
       key: 'date',
+      render: (_: any, record: any) => (
+        editingRecordId === record.id ? (
+          <DatePicker
+            style={{ width: '100%' }}
+            value={editRecord.date ? dayjs(editRecord.date, 'YYYY-MM-DD') : null}
+            onChange={(d) => setEditRecord(prev => ({ ...prev, date: d ? d.format('YYYY-MM-DD') : '' }))}
+          />
+        ) : (
+          <span>{record.date}</span>
+        )
+      )
     },
+    {
+      title: '操作',
+      key: 'action',
+      width: 160,
+      render: (_: any, record: any) => (
+        editingRecordId === record.id ? (
+          <Space>
+            <Button type="link" loading={recordSaving} onClick={() => saveEditRecord(record.id)}>保存</Button>
+            <Button type="link" onClick={cancelEditRecord}>取消</Button>
+          </Space>
+        ) : (
+          <Space>
+            <Button type="link" onClick={() => startEditRecord(record)}>编辑</Button>
+            <Popconfirm title="确认删除该开销？" onConfirm={() => deleteRecord(record.id)} okText="删除" cancelText="取消">
+              <Button type="link" danger loading={recordDeletingId === record.id}>删除</Button>
+            </Popconfirm>
+          </Space>
+        )
+      )
+    }
   ];
 
   // 可拖拽的活动行组件

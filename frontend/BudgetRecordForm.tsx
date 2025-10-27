@@ -38,7 +38,7 @@ const BudgetRecordForm: React.FC<{ userId: number; onSuccess: () => void }> = ({
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/budget/record', {
+      const res = await fetch('/api/budget/record/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
