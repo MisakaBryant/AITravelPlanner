@@ -97,6 +97,9 @@ docker compose up -d --build
   3) 可选：将生成的 Package（GHCR 镜像）设为 Public 以便公开拉取；
   3) 如需推送到 Docker Hub，改用 `docker/login-action` 登录 Docker Hub，并配置仓库 Secrets：`DOCKERHUB_USERNAME`、`DOCKERHUB_TOKEN`，然后调整 workflow 中的 registry 与 tags。
 
+- 构建时 lockfile（package-lock.json）说明：
+  - 本仓库未提交 package-lock.json。工作流会在构建前为 `frontend/` 与 `backend/` 生成 lockfile（npm install --package-lock-only），随后 Dockerfile 若检测到 lockfile 即执行 `npm ci`；若未检测到则回退到 `npm install`。这既保证可复现性，也允许本地/私有环境直接构建。
+
 - 手动触发：在 GitHub → Actions → Build and Publish Docker Images → Run workflow。
 
 - 拉取与使用：

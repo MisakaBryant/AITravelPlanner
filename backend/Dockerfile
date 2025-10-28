@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Install deps first for better layer caching
 COPY package*.json ./
-RUN npm ci
+RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi
 
 # Copy source
 COPY . .

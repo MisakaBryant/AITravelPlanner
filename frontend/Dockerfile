@@ -11,7 +11,7 @@ ENV VITE_AMAP_JS_KEY=${VITE_AMAP_JS_KEY}
 
 # Install deps
 COPY package*.json ./
-RUN npm ci
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 # Copy source and build
 COPY . .
