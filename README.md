@@ -87,28 +87,29 @@ docker compose up -d --build
 仓库已包含工作流：`.github/workflows/docker-images.yml`，在 push 到 main 或手动触发时，会分别构建并推送前后端镜像到 GitHub Container Registry（GHCR）。
 
 - 镜像名称（默认）：
-  - 前端：`ghcr.io/<OWNER>/aitravelplanner-frontend:latest`
-  - 后端：`ghcr.io/<OWNER>/aitravelplanner-backend:latest`
+  - 前端：`ghcr.io/<owner-lowercase>/aitravelplanner-frontend:latest`
+  - 后端：`ghcr.io/<owner-lowercase>/aitravelplanner-backend:latest`
   - 同时推送 `sha-<GIT_SHA>` 标签用于可追溯发布
 
 - 先决条件：
   1) 仓库 Settings → Actions → General，将“Workflow permissions”设为“Read and write permissions”；
-  2) 可选：将生成的 Package（GHCR 镜像）设为 Public 以便公开拉取；
+  2) GHCR 仓库名需全小写。工作流已自动将 `${{ github.repository_owner }}` 转小写用于镜像 tag；
+  3) 可选：将生成的 Package（GHCR 镜像）设为 Public 以便公开拉取；
   3) 如需推送到 Docker Hub，改用 `docker/login-action` 登录 Docker Hub，并配置仓库 Secrets：`DOCKERHUB_USERNAME`、`DOCKERHUB_TOKEN`，然后调整 workflow 中的 registry 与 tags。
 
 - 手动触发：在 GitHub → Actions → Build and Publish Docker Images → Run workflow。
 
 - 拉取与使用：
   ```powershell
-  docker pull ghcr.io/<OWNER>/aitravelplanner-frontend:latest
-  docker pull ghcr.io/<OWNER>/aitravelplanner-backend:latest
+  docker pull ghcr.io/<owner-lowercase>/aitravelplanner-frontend:latest
+  docker pull ghcr.io/<owner-lowercase>/aitravelplanner-backend:latest
   ```
 
 - 使用镜像运行（替换 docker-compose.yml 中的 build 为 image）：
   ```yaml
   services:
     backend:
-      image: ghcr.io/<OWNER>/aitravelplanner-backend:latest
+  image: ghcr.io/<owner-lowercase>/aitravelplanner-backend:latest
       environment:
         - NODE_ENV=production
         - PORT=3001
@@ -123,7 +124,7 @@ docker compose up -d --build
       restart: unless-stopped
 
     frontend:
-      image: ghcr.io/<OWNER>/aitravelplanner-frontend:latest
+  image: ghcr.io/<owner-lowercase>/aitravelplanner-frontend:latest
       environment:
         - AMAP_KEY=${AMAP_KEY}
         - AMAP_JS_KEY=${AMAP_JS_KEY}
