@@ -82,16 +82,58 @@ docker compose up -d --build
 
 说明：前端容器内置 Nginx，已将 `/api/*` 反向代理到后端容器 `backend:3001`，前端代码中的 `fetch('/api/...')` 可直接工作且保持 Cookie 透传，无需额外 CORS 配置。
 
-## 四、CI/CD
-- 推荐使用 GitHub Actions 自动构建并推送 Docker 镜像到阿里云镜像仓库。
-- 可参考官方文档或在 `.github/workflows/` 下自定义 workflow。
+## 四、CI/CD：使用 GitHub Actions 构建并推送镜像（GHCR）
 
-## 五、API Key 配置说明
-- 请勿将 key 写入代码，统一放在 `config/.env` 或前端 `.env` 文件。
-- 如需助教批改，建议提供阿里云百炼平台可用 key 并注明有效期。
+仓库已包含工作流：`.github/workflows/docker-images.yml`，在 push 到 main 或手动触发时，会分别构建并推送前后端镜像到 GitHub Container Registry（GHCR）。
 
----
-如需详细开发文档、API Key 获取方式、CI/CD 配置等，可参考本项目后续补充内容。
+- 镜像名称（默认）：
+  - 前端：`ghcr.io/<OWNER>/aitravelplanner-frontend:latest`
+  - 后端：`ghcr.io/<OWNER>/aitravelplanner-backend:latest`
+  - 同时推送 `sha-<GIT_SHA>` 标签用于可追溯发布
+
+- 先决条件：
+  1) 仓库 Settings → Actions → General，将“Workflow permissions”设为“Read and write permissions”；
+  2) 可选：将生成的 Package（GHCR 镜像）设为 Public 以便公开拉取；
+  3) 如需推送到 Docker Hub，改用 `docker/login-action` 登录 Docker Hub，并配置仓库 Secrets：`DOCKERHUB_USERNAME`、`DOCKERHUB_TOKEN`，然后调整 workflow 中的 registry 与 tags。
+
+- 手动触发：在 GitHub → Actions → Build and Publish Docker Images → Run workflow。
+
+- 拉取与使用：
+  ```powershell
+  docker pull ghcr.io/<OWNER>/aitravelplanner-frontend:latest
+  docker pull ghcr.io/<OWNER>/aitravelplanner-backend:latest
+  ```
+
+- 使用镜像运行（替换 docker-compose.yml 中的 build 为 image）：
+  ```yaml
+  services:
+    backend:
+      image: ghcr.io/<OWNER>/aitravelplanner-backend:latest
+      environment:
+        - NODE_ENV=production
+        - PORT=3001
+        - SUPABASE_URL=${SUPABASE_URL}
+        - SUPABASE_KEY=${SUPABASE_KEY}
+        - OPENAI_API_KEY=${OPENAI_API_KEY}
+        - OPENAI_MODEL=${OPENAI_MODEL}
+        - OPENAI_BASE_URL=${OPENAI_BASE_URL}
+        - COOKIE_SECRET=${COOKIE_SECRET}
+      ports:
+        - "3001:3001"
+      restart: unless-stopped
+
+    frontend:
+      image: ghcr.io/<OWNER>/aitravelplanner-frontend:latest
+      environment:
+        - AMAP_KEY=${AMAP_KEY}
+        - AMAP_JS_KEY=${AMAP_JS_KEY}
+        - API_BASE=/api
+      depends_on:
+        - backend
+      ports:
+        - "8080:80"
+      restart: unless-stopped
+  ```
 
 # AITravelPlanner 项目说明
 
@@ -111,32 +153,6 @@ AITravelPlanner 是一个基于 AI 的智能旅行规划 Web 应用，旨在简�
 - 数据库与认证：Supabase（PostgreSQL + Auth），可选 Firebase。
 - 行程规划与预算：调用大语言模型 API（如阿里云百炼、OpenAI、智谱等）。
 - 云端同步：Supabase 或 Firebase 实现。
-- 部署与容器化：Docker，支持一键部署，CI/CD 使用 GitHub Actions 自动打包并推送至阿里云镜像仓库。
+- 部署与容器化：Docker；CI/CD 使用 GitHub Actions 自动构建并推送镜像到 GHCR（可改为 Docker Hub）。
+ 
 
-## 四、部署与运行
-1. **环境准备**：需配置 API Key（语音识别、地图、AI），建议通过 `.env` 或 `config.json` 文件管理，切勿写入代码。
-2. **本地运行**：
-	- 前端：`npm install && npm run dev`
-	- 后端：`npm install && npm run start`
-3. **Docker 部署**：
-	- 构建镜像：`docker build -t aitravelplanner .`
-	- 运行容器：`docker run -p 80:80 --env-file .env aitravelplanner`
-4. **云端部署**：通过 GitHub Actions 自动构建并推送至阿里云镜像仓库。
-
-## 五、API Key 配置说明
-- 请将所有 API Key 配置在 `.env` 或 `config.json` 文件中，并在 README 中注明 key 的获取方式和有效期。
-- 若使用阿里云百炼平台，请在 README 中提供助教可用的 key，并保证 3 个月内有效。
-
-## 六、GitHub 提交规范
-- 每个功能模块开发完成后，进行一次规范化 commit。
-- commit message 示例：
-  - feat: 完成智能行程规划功能
-  - fix: 修复语音识别接口异常
-  - docs: 更新 README 部署说明
-- 保留详细的开发过程提交记录。
-
-## 七、PDF 提交要求
-- 提交 PDF 文件，包含 GitHub 仓库地址和完整 README 文档。
-
----
-> 如需详细开发文档、API Key 获取方式、Dockerfile 示例、CI/CD 配置等，可参考本项目后续补充内容。
