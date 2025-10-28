@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: aitravel-backend
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      # Supabase
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      # OpenAI
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL}
+      # Cookie/token
+      - COOKIE_SECRET=${COOKIE_SECRET}
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: aitravel-frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+    environment:
+      # Runtime envs rendered into env.js
+      - AMAP_KEY=${AMAP_KEY}
+      - AMAP_JS_KEY=${AMAP_JS_KEY}
+      # Optional API base for frontend to call backend via Nginx proxy path
+      - API_BASE=/api
+    restart: unless-stopped
+
+# Usage:
+# 1) Create a .env file next to this compose with variables below.
+# 2) docker compose up -d --build
+# 3) Open http://localhost:8080

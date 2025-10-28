@@ -6,6 +6,7 @@ npm-debug.log*
 # Env
 .env
 .env.*
+frontend/public/env.js
 
 # Vite
 */dist

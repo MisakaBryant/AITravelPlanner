@@ -17,20 +17,25 @@
    ```
 6. 在 Supabase Dashboard → Settings → API 中获取 `service_role key`
 
-### 2. 配置环境变量
-- 配置 `backend/.env`，填写各类 API Key：
+### 2. 配置环境变量（前后端均在运行时提供）
+- 后端环境变量（运行时注入，见 docker-compose.yml → services.backend.environment）：
   ```env
   PORT=3001
+  SUPABASE_URL=你的Supabase项目URL
+  SUPABASE_KEY=你的Supabase service_role key
   OPENAI_API_KEY=你的大模型API Key
-  OPENAI_MODEL=hunyuan-turbos-latest
-  OPENAI_BASE_URL=https://api.hunyuan.cloud.tencent.com/v1
-  SUPABASE_URL=https://你的项目.supabase.co
-  SUPABASE_KEY=你的service_role_key
+  OPENAI_MODEL=gpt-4o-mini # 或你所使用的模型
+  OPENAI_BASE_URL=https://api.openai.com/v1 # 如使用第三方网关可自定义
+  COOKIE_SECRET=用于签名token的随机字符串
+  NODE_ENV=production
   ```
-- 前端高德地图需在 `frontend/index.html` 中引入：
-  ```html
-  <script src="https://webapi.amap.com/maps?v=2.0&key=你的高德Key"></script>
+- 前端环境变量（运行时注入，容器启动时生成 `/env.js`，见 docker-compose.yml → services.frontend.environment）：
+  ```env
+  AMAP_KEY=你的高德Web端Key（公开型，前端可见）
+  AMAP_JS_KEY=你的高德安全密钥 securityJsCode（公开型，前端可见）
+  API_BASE=/api  # 可选，前端调用后端的反向代理路径
   ```
+  说明：前端容器启动时会将 `frontend/public/env.template.js` 渲染为 `/usr/share/nginx/html/env.js`，`index.html` 动态读取该文件并用其中的 Key 载入高德 JS SDK。因此你可以在不重建镜像的情况下切换前端 Key。
 
 ## 二、本地开发
 - 后端：
@@ -46,12 +51,36 @@
 	npm run dev
 	```
 
-## 三、Docker 一键部署
-```shell
-docker build -t aitravelplanner .
-docker run -p 3001:3001 --env-file ./config/.env aitravelplanner
+## 三、Docker Compose 一键部署
+
+项目已内置前后端 Dockerfile 与 Nginx 反向代理配置，支持“前后端都在运行时注入 Key”。无需在镜像构建时提供 Key。
+
+1) 在项目根目录创建 `.env` 文件，示例：
+```env
+# Backend (runtime)
+SUPABASE_URL=...
+SUPABASE_KEY=...
+OPENAI_API_KEY=...
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_BASE_URL=https://api.openai.com/v1
+COOKIE_SECRET=...
+
+# Frontend (runtime)
+AMAP_KEY=...
+AMAP_JS_KEY=...
+API_BASE=/api
 ```
-前端静态文件可用 nginx/serve 另行部署，或通过后端接口代理。
+
+2) 构建并启动：
+```powershell
+docker compose up -d --build
+```
+
+3) 访问：
+- 前端：http://localhost:8080
+- 后端健康检查：http://localhost:3001/api/health
+
+说明：前端容器内置 Nginx，已将 `/api/*` 反向代理到后端容器 `backend:3001`，前端代码中的 `fetch('/api/...')` 可直接工作且保持 Cookie 透传，无需额外 CORS 配置。
 
 ## 四、CI/CD
 - 推荐使用 GitHub Actions 自动构建并推送 Docker 镜像到阿里云镜像仓库。

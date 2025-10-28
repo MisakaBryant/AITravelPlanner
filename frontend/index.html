@@ -5,13 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AITravelPlanner 智能旅行规划</title>
     <link rel="stylesheet" href="https://a.amap.com/jsapi_demos/static/demo-center/css/demo-center.css" />
+    <!-- Load runtime env first -->
+    <script src="/env.js"></script>
     <script type="text/javascript">
-      window._AMapSecurityConfig = {
-        securityJsCode: "%VITE_AMAP_JS_KEY%",
-      };
+      (function () {
+        // Configure AMap Security with runtime env
+        window._AMapSecurityConfig = {
+          securityJsCode: (window.__ENV && window.__ENV.AMAP_JS_KEY) || ''
+        };
+        // Dynamically inject AMap JS SDK with runtime key
+        var amapKey = (window.__ENV && window.__ENV.AMAP_KEY) || '';
+        if (amapKey) {
+          var script = document.createElement('script');
+          script.src = 'https://webapi.amap.com/maps?v=2.0&key=' + encodeURIComponent(amapKey);
+          script.async = false;
+          document.head.appendChild(script);
+        } else {
+          console.error('[AMap] Missing AMAP_KEY in runtime env');
+        }
+      })();
     </script>
-    <script src="https://a.amap.com/jsapi_demos/static/demo-center/js/demoutils.js"></script>
-    <script src="https://webapi.amap.com/maps?v=2.0&key=%VITE_AMAP_KEY%"></script>
   </head>
   <body>
     <div id="root"></div>
