@@ -139,6 +139,28 @@ docker compose up -d --build
       restart: unless-stopped
   ```
 
+### 推送到阿里云容器镜像服务（ACR）
+
+工作流已内置“可选的 ACR 推送步骤”。如需启用：
+
+1) 在仓库 Settings → Secrets and variables → Actions → New repository secret，新增以下 Secrets：
+  - `ACR_REGISTRY`：你的 ACR 登录地址，例如 `registry.cn-hangzhou.aliyuncs.com`
+  - `ACR_NAMESPACE`：你的 ACR 命名空间，例如 `myspace`（建议全小写）
+  - `ACR_USERNAME`：你的 ACR 登录用户名（阿里云账号名或创建的访问凭证）
+  - `ACR_PASSWORD`：你的 ACR 登录密码或访问凭证 Token
+
+2) 重新触发工作流后，将额外推送以下镜像：
+  - 前端：`${ACR_REGISTRY}/${ACR_NAMESPACE}/aitravelplanner-frontend:latest` 与 `:sha-<GIT_SHA>`
+  - 后端：`${ACR_REGISTRY}/${ACR_NAMESPACE}/aitravelplanner-backend:latest` 与 `:sha-<GIT_SHA>`
+
+3) 拉取示例：
+```powershell
+docker pull registry.cn-hangzhou.aliyuncs.com/<namespace>/aitravelplanner-frontend:latest
+docker pull registry.cn-hangzhou.aliyuncs.com/<namespace>/aitravelplanner-backend:latest
+```
+
+注意：ACR 仓库名通常需要小写（namespace 与 repo 建议均小写）。如需改为仅推送 ACR，可删除 GHCR 登录与 push 步骤或将其置为条件执行。
+
 # AITravelPlanner 项目说明
 
 ## 一、项目简介
