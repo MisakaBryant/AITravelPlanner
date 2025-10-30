@@ -16,6 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ACR_REGISTRY: ${{ secrets.ACR_REGISTRY }}
+      ACR_NAMESPACE: ${{ secrets.ACR_NAMESPACE }}
       ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
       ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
     steps:
@@ -70,8 +71,8 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: |
-            ${{ env.ACR_REGISTRY }}/aitravelplanner-frontend:sha-${{ github.sha }}
-            ${{ env.ACR_REGISTRY }}/aitravelplanner-frontend:latest
+            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/aitravelplanner-frontend:sha-${{ github.sha }}
+            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/aitravelplanner-frontend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -122,6 +123,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.ACR_REGISTRY }}
+          namespace: ${{ env.ACR_NAMESPACE}}
           username: ${{ env.ACR_USERNAME }}
           password: ${{ env.ACR_PASSWORD }}
 
@@ -134,7 +136,7 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: |
-            ${{ env.ACR_REGISTRY }}/aitravelplanner-backend:sha-${{ github.sha }}
-            ${{ env.ACR_REGISTRY }}/aitravelplanner-backend:latest
+            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/aitravelplanner-backend:sha-${{ github.sha }}
+            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/aitravelplanner-backend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
