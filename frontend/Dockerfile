@@ -3,12 +3,6 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Pass Vite envs at build time (AMap keys). They must start with VITE_ to be injected.
-ARG VITE_AMAP_KEY
-ARG VITE_AMAP_JS_KEY
-ENV VITE_AMAP_KEY=${VITE_AMAP_KEY}
-ENV VITE_AMAP_JS_KEY=${VITE_AMAP_JS_KEY}
-
 # Install deps
 COPY package*.json ./
 RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
